@@ -1,7 +1,5 @@
-// src/config/firebaseConfig.js
-
-const { initializeApp } = require('firebase/app');
-const { getFirestore } = require('firebase/firestore');
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 
 // Your Firebase configuration
 const firebaseConfig = {
@@ -17,8 +15,5 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore
-const db = getFirestore(app);
-
-// Export db for use in other files
-module.exports = { db };
+// Initialize and export Firestore
+export const db = getFirestore(app);
