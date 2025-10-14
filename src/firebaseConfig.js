@@ -1,19 +1,20 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// Your Firebase configuration
+// Your Firebase configuration is now read securely from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyAHlk5Qt7xkGSHXnZ97BdVff3WbH6sI3qA",
-  authDomain: "learnify-chat-bd1d7.firebaseapp.com",
-  projectId: "learnify-chat-bd1d7",
-  storageBucket: "learnify-chat-bd1d7.appspot.com",
-  messagingSenderId: "470971321185",
-  appId: "1:470971321185:web:11b191e59dcc455f08d320",
-  measurementId: "G-B4WJ9367NL"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize and export Firestore
+// Initialize and export Firestore for use in other files
 export const db = getFirestore(app);
+
