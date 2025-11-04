@@ -142,7 +142,7 @@ function Notes() {
   const getNextStepAndOptions = () => {
     if (!materialType) return { step: 'materialType', options: [{key: 'learnify', name: 'Learnify Material'}, {key: 'university', name: 'University Material'}]};
 
-    if (materialType === 'learnify') {
+    if (materialType === 'OriNotes') {
         if (!filters.institution_type) return { step: 'institutionType', options: contentData.institutionTypes.map(i => ({key: i, name: i})) };
         const fieldOptions = contentData.fields[filters.institution_type] || [];
         if (!filters.field && fieldOptions.length > 0) return { step: 'field', options: fieldOptions.map(f => ({key: f, name: f})) };
