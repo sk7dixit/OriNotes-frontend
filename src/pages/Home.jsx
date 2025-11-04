@@ -10,7 +10,7 @@ const HowToUseModal = ({ isOpen, onClose }) => {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
             <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-6 relative border border-cyan-500">
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
-                <h2 className="text-3xl font-bold text-cyan-400 mb-4">How to Use Learnify</h2>
+                <h2 className="text-3xl font-bold text-cyan-400 mb-4">How to Use OriNotes</h2>
                 <div className="space-y-3 text-gray-300 max-h-[70vh] overflow-y-auto pr-2">
                     {/* Modal content remains the same */}
                     <p><strong>Browse Notes:</strong> Go to the "Notes" tab...</p>
@@ -75,7 +75,7 @@ const Home = () => {
 
         {/* --- CONTACT US (Moved for better layout) --- */}
         <div className="absolute bottom-4 left-4 z-20 text-gray-400 text-sm">
-          <p><strong>Contact Us:</strong> <a href="mailto:learnify887@gmail.com" className="text-cyan-400 hover:underline">learnify887@gmail.com</a></p>
+          <p><strong>Contact Us:</strong> <a href="mailto:learnify887@gmail.com" className="text-cyan-400 hover:underline">OriNotes887@gmail.com</a></p>
         </div>
       </div>
     </>

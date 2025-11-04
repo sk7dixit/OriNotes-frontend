@@ -8,7 +8,7 @@ function PrivacyPolicy() {
       <div className="space-y-6 text-gray-300 leading-relaxed">
         <p className="text-lg">Last updated: October 8, 2025</p>
 
-        <p>Your privacy is important to us. It is Learnify's policy to respect your privacy regarding any information we may collect from you across our website, and other sites we own and operate.</p>
+        <p>Your privacy is important to us. It is OriNotes's policy to respect your privacy regarding any information we may collect from you across our website, and other sites we own and operate.</p>
 
         <section className="space-y-2">
           <h2 className="text-2xl font-semibold text-cyan-300">1. Information We Collect</h2>
