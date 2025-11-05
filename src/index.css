@@ -1,12 +1,5 @@
 /* src/index.css */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-/* Define keyframes for subtle background animation */
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
 html,
 body,
@@ -16,19 +9,64 @@ body,
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  /* overflow: hidden; */
-
-  /* --- NEW FANTASTIC GRADIENT --- */
-  background: linear-gradient(135deg, #1A202C, #0F172A, #003366, #1A202C);
-  background-size: 400% 400%; /* For smooth, large animation */
-  animation: gradientShift 20s ease infinite; /* Slow, infinite movement */
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: 'Poppins', sans-serif;
 }
 
-body {
-  font-family: 'Poppins', Arial, sans-serif;
-  line-height: 1.5;
-  /* background-color: #1a202c; REMOVED as gradient is applied to html/body */
-  color: #f7fafc;
+/* Smooth fade animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Floating particle animation */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 1s ease forwards;
+}
+.animate-fadeIn {
+  animation: fadeIn 1s ease forwards;
+}
+.animate-float {
+  animation: float 10s ease-in-out infinite;
+}
+
+/* Gradient animation for text */
+@keyframes textGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: textGradient 6s ease infinite;
 }
 
 @tailwind base;

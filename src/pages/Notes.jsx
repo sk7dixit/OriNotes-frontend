@@ -140,7 +140,7 @@ function Notes() {
   };
 
   const getNextStepAndOptions = () => {
-    if (!materialType) return { step: 'materialType', options: [{key: 'OriNotes', name: 'Learnify Material'}, {key: 'university', name: 'University Material'}]};
+    if (!materialType) return { step: 'materialType', options: [{key: 'OriNotes', name: 'OriNotes'}, {key: 'university', name: 'University Material'}]};
 
     if (materialType === 'OriNotes') {
         if (!filters.institution_type) return { step: 'institutionType', options: contentData.institutionTypes.map(i => ({key: i, name: i})) };
