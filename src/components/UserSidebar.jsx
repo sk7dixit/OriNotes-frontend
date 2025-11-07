@@ -59,6 +59,8 @@ function UserSidebar() {
           </button>
           {isAccountOpen && (
             <div className="pl-6 pt-2 space-y-2 text-md">
+              {/* --- FIX: ADDED MISSING PROFILE LINK --- */}
+              <NavLink to="/profile" onClick={handleNavClick} style={({isActive}) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"><AccountIcon/><span>My Profile</span></NavLink>
               <NavLink to="/my-badges" onClick={handleNavClick} style={({isActive}) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"><BadgeIcon/><span>My Badges</span></NavLink>
               <NavLink to="/change-password" onClick={handleNavClick} style={({isActive}) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">Change Password</NavLink>
               <NavLink to="/note-requests" onClick={handleNavClick} style={({isActive}) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">Note Requests</NavLink>

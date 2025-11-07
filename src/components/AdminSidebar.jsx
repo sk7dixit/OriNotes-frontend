@@ -14,6 +14,7 @@ const ApprovalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 const SubmissionsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const BadgeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697A3.42 3.42 0 004.5 6.5l-1 7.5a3.42 3.42 0 003.335 2.803M16.165 4.697A3.42 3.42 0 0119.5 6.5l1 7.5a3.42 3.42 0 01-3.335 2.803m-6.664-9.606a12.023 12.023 0 016.664 0" /></svg>;
 const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>;
+const AccountIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 
 
 function AdminSidebar() {
@@ -58,6 +59,8 @@ function AdminSidebar() {
           </button>
           {isAccountOpen && (
             <div className="pl-6 pt-2 space-y-2 text-md">
+              {/* --- FIX: ADDED MISSING PROFILE LINK --- */}
+              <NavLink to="/profile" onClick={handleNavClick} style={({isActive}) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"><AccountIcon/><span>My Profile</span></NavLink>
               <NavLink to="/change-password" onClick={handleNavClick} style={({isActive}) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">Change Password</NavLink>
               <NavLink to="/suggest" onClick={handleNavClick} style={({isActive}) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">User Suggestions</NavLink>
               <div className="pt-2"><LogoutButton /></div>
