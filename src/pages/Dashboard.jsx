@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { LogOut, User, Menu, Search, Upload, BookOpen } from 'lucide-react';
-import BrowseNotesModal from './BrowseNotesModal';
+import { LogOut, User, Menu, Search, Upload } from 'lucide-react';
+// ⚠️ BROWSE NOTES MODAL IS REMOVED HERE because it should be its own page component
 
 // Mock data and user name for demonstration
 const userName = "Shashwat";
@@ -13,21 +13,20 @@ const userProfile = {
 
 const Dashboard = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    // State to control the visibility of the new browsing modal
-    const [showBrowseModal, setShowBrowseModal] = useState(false);
+    // ⚠️ Modal state removed: [showBrowseModal, setShowBrowseModal]
 
     const handleLogout = () => {
         // Implement your logout logic here
         console.log("Logging out...");
-        // Close menu if open
         setIsMenuOpen(false);
     };
 
-    const handleSearchNotes = (criteria) => {
-        console.log("Searching with criteria:", criteria);
-        // This is where you would redirect the user to a search results page
-        setShowBrowseModal(false); // Close modal after search attempt
-    }
+    // ➡️ New handler to simulate navigation (You MUST use useNavigate() here in your actual code)
+    const handleRedirectToBrowse = () => {
+        // ⚠️ In a real app, you would use: navigate('/browse-notes');
+        console.log("Redirecting to /browse-notes route...");
+        // You must implement React Router's useNavigate() for this to work
+    };
 
     // --- Dashboard Content (JSX) ---
     return (
@@ -37,7 +36,7 @@ const Dashboard = () => {
             <header className="p-4 bg-[#121a28] shadow-lg sticky top-0 z-20">
                 <div className="flex items-center justify-between">
 
-                    {/* Left: Menu Button and Welcome Text */}
+                    {/* Left: Menu Button and Welcome Text (Unchanged) */}
                     <div className="flex items-center space-x-3">
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -55,13 +54,13 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* Right: Quick Action (Opens the Browse Modal) */}
+                    {/* ➡️ Right: RESTORED PROFILE/USER SECTION */}
                     <button
-                        onClick={() => setShowBrowseModal(true)}
-                        className="p-2 rounded-full bg-green-600 hover:bg-green-500 transition shadow-md"
-                        aria-label="Open Notes Search"
+                        className="flex items-center space-x-2 p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition"
+                        aria-label="User Profile"
+                        // Add link to profile page here if needed
                     >
-                        <Search className="w-6 h-6 text-white" />
+                        <User className="w-6 h-6 text-cyan-400" />
                     </button>
 
                 </div>
@@ -77,10 +76,14 @@ const Dashboard = () => {
                 </div>
 
                 <div className="space-y-4">
-                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-cyan-700 bg-opacity-20 transition">
+                    {/* My Profile Link/Button */}
+                    <button
+                        className="w-full flex items-center space-x-3 p-3 rounded-lg bg-cyan-700 bg-opacity-20 hover:bg-opacity-30 transition"
+                        onClick={() => { console.log("Navigating to My Profile"); setIsMenuOpen(false); }}
+                    >
                         <User className="w-5 h-5 text-cyan-400" />
                         <span className="text-lg font-semibold text-cyan-200">My Profile</span>
-                    </div>
+                    </button>
 
                     <button
                         onClick={handleLogout}
@@ -131,9 +134,9 @@ const Dashboard = () => {
                             <Upload className="w-5 h-5" />
                             <span>Upload a Note</span>
                         </button>
-                        {/* Browse Button - Now opens the modal */}
+                        {/* Browse Button - NOW REDIRECTS */}
                         <button
-                            onClick={() => setShowBrowseModal(true)}
+                            onClick={handleRedirectToBrowse} // ⬅️ The button now redirects to the Browse Page
                             className="flex-1 bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-cyan-700 transition shadow-md flex items-center justify-center space-x-2"
                         >
                             <Search className="w-5 h-5" />
@@ -144,13 +147,6 @@ const Dashboard = () => {
 
             </main>
 
-            {/* 4. BROWSE NOTES MODAL INTEGRATION */}
-            {showBrowseModal && (
-                <Modal onClose={() => setShowBrowseModal(false)}>
-                    {/* The modal content is the new component */}
-                    <BrowseNotesModal onSearch={handleSearchNotes} />
-                </Modal>
-            )}
         </div>
     );
 };
@@ -172,22 +168,5 @@ const Card = ({ icon, title, value, color, details }) => (
     </div>
 );
 
-// Helper Modal Component for the BrowseNotesModal
-const Modal = ({ children, onClose }) => (
-    // Fixed inset 0 makes it full screen, z-50 ensures it's on top
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-start justify-center p-4">
-        {/* max-w-4xl makes it responsive but large on desktop */}
-        <div className="relative max-h-full w-full max-w-4xl mt-10">
-            <button
-                onClick={onClose}
-                className="absolute -top-10 right-0 text-white text-4xl font-light z-50 hover:text-cyan-400 transition"
-                aria-label="Close modal"
-            >
-                &times;
-            </button>
-            {children}
-        </div>
-    </div>
-);
 
 export default Dashboard;
