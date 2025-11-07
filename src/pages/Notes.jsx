@@ -6,7 +6,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { debounce } from 'lodash';
 // Import the dedicated component for University search
-import BrowseNotesPage from './BrowseNotesModal'; // Assuming you kept the file name BrowseNotesModal.jsx
+import BrowseNotesPage from './BrowseNotesPage'; // Assuming you kept the file name BrowseNotesModal.jsx
 import { courseData, subjectData } from '../services/universityData';
 
 
