@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm exec vite build", // <-- FIX: Explicitly use npm to execute the local binary
+    "build": "npm exec vite build",
     "preview": "vite preview"
   },
   "dependencies": {
