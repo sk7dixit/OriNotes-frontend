@@ -6,7 +6,7 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 import api from "../services/api";
-import { useAuth } from "../context/AuthAuthContext";
+import { useAuth } from "../context/AuthContext"; // <-- FIX: Corrected path from AuthAuthContext to AuthContext
 
 const COLORS = ['#06b6d4', '#7c3aed', '#ec4899', '#f59e0b', '#10b981'];
 
