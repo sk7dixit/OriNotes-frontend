@@ -2,12 +2,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// This is the standard, minimal configuration for a React project with Vite.
 export default defineConfig({
   plugins: [react()],
-  // REMOVE the entire build block:
-  // build: {
-  //   rollupOptions: {
-  //     external: ['react-dropzone'],
-  //   },
-  // },
+  // Any unnecessary or conflicting build options have been removed.
 });
