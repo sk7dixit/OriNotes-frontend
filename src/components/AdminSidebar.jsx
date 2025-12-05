@@ -24,74 +24,59 @@ function AdminSidebar() {
   const activeLinkStyle = { backgroundColor: '#1e3a8a', color: 'white' };
 
   // Helper to close mobile menu on navigation
-  const handleNavClick = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  const SidebarContent = () => (
-    <>
-      <div className="flex items-center space-x-3 mb-10 pl-2">
-        <img src="/logo.png" alt="OriNotes Logo" className="h-10 w-10" />
-      </ul>
-    </nav>
-
-      <div className="w-full">
-        <div className="border-t border-gray-700 mb-2"></div>
-        <button onClick={() => setAccountOpen(!isAccountOpen)} className="w-full flex justify-between items-center text-lg p-3 rounded-lg hover:bg-gray-800 hover:text-white transition-colors duration-200">
-          <div className="flex items-center space-x-4">
-            <div className="w-8 h-8 bg-cyan-800 rounded-full flex items-center justify-center font-bold text-white">{user?.name?.charAt(0)}</div>
-            <span>{user?.name}</span>
-          </div>
-          <svg className={`h-5 w-5 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-        </button>
-        {isAccountOpen && (
-          <div className="pl-6 pt-2 space-y-2 text-md">
-            {/* --- FIX: ADDED MISSING PROFILE LINK --- */}
-            <NavLink to="/profile" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"><AccountIcon /><span>My Profile</span></NavLink>
-            <NavLink to="/change-password" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">Change Password</NavLink>
-            <NavLink to="/suggest" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">User Suggestions</NavLink>
-            <div className="pt-2"><LogoutButton /></div>
-          </div>
-        )}
+  <span>{user?.name}</span>
+          </div >
+    <svg className={`h-5 w-5 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+        </button >
+    { isAccountOpen && (
+      <div className="pl-6 pt-2 space-y-2 text-md">
+        {/* --- FIX: ADDED MISSING PROFILE LINK --- */}
+        <NavLink to="/profile" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"><AccountIcon /><span>My Profile</span></NavLink>
+        <NavLink to="/change-password" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">Change Password</NavLink>
+        <NavLink to="/suggest" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="block text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800">User Suggestions</NavLink>
+        <div className="pt-2"><LogoutButton /></div>
       </div>
+    )
+}
+      </div >
     </>
   );
 
-  return (
-    <>
-      {/* 1. Mobile Menu Button (Visible on mobile/small screens) */}
-      <button
-        onClick={() => setIsMobileMenuOpen(true)}
-        className="fixed top-4 left-4 z-40 p-2 bg-gray-800 rounded-lg shadow-lg sm:hidden text-white border border-cyan-500"
-        aria-label="Open menu"
-      >
-        <MenuIcon />
+return (
+  <>
+    {/* 1. Mobile Menu Button (Visible on mobile/small screens) */}
+    <button
+      onClick={() => setIsMobileMenuOpen(true)}
+      className="fixed top-4 left-4 z-40 p-2 bg-gray-800 rounded-lg shadow-lg sm:hidden text-white border border-cyan-500"
+      aria-label="Open menu"
+    >
+      <MenuIcon />
+    </button>
+
+    {/* 2. Desktop Sidebar (Visible on sm: and larger screens) */}
+    <div className="fixed top-0 left-0 h-full w-64 bg-gray-900 text-gray-300 p-5 flex-col shadow-2xl z-30 border-r border-gray-700/50 hidden sm:flex">
+      <SidebarContent />
+    </div>
+
+    {/* 3. Mobile Overlay Sidebar (Absolute position, slide-in/out effect) */}
+    <div
+      className={`fixed top-0 left-0 h-full w-64 bg-gray-900 text-gray-300 p-5 flex-col shadow-2xl z-50 border-r border-gray-700/50 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} sm:hidden`}
+    >
+      <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-4 right-4 text-3xl text-gray-400 hover:text-white">
+        &times;
       </button>
+      <SidebarContent />
+    </div>
 
-      {/* 2. Desktop Sidebar (Visible on sm: and larger screens) */}
-      <div className="fixed top-0 left-0 h-full w-64 bg-gray-900 text-gray-300 p-5 flex-col shadow-2xl z-30 border-r border-gray-700/50 hidden sm:flex">
-        <SidebarContent />
-      </div>
-
-      {/* 3. Mobile Overlay Sidebar (Absolute position, slide-in/out effect) */}
+    {/* 4. Overlay Backdrop (Appears when mobile menu is open) */}
+    {isMobileMenuOpen && (
       <div
-        className={`fixed top-0 left-0 h-full w-64 bg-gray-900 text-gray-300 p-5 flex-col shadow-2xl z-50 border-r border-gray-700/50 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} sm:hidden`}
-      >
-        <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-4 right-4 text-3xl text-gray-400 hover:text-white">
-          &times;
-        </button>
-        <SidebarContent />
-      </div>
-
-      {/* 4. Overlay Backdrop (Appears when mobile menu is open) */}
-      {isMobileMenuOpen && (
-        <div
-          onClick={() => setIsMobileMenuOpen(false)}
-          className="fixed inset-0 bg-black opacity-50 z-40 sm:hidden"
-        ></div>
-      )}
-    </>
-  );
+        onClick={() => setIsMobileMenuOpen(false)}
+        className="fixed inset-0 bg-black opacity-50 z-40 sm:hidden"
+      ></div>
+    )}
+  </>
+);
 }
 
 export default AdminSidebar;
