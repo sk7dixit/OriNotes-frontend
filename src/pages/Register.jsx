@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Lock, Phone, Globe, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Phone, Globe, ArrowRight, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import GlassCard from '../components/ui/GlassCard';
@@ -20,6 +20,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [countryCode, setCountryCode] = useState('+91');
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -115,46 +116,17 @@ const Register = () => {
             <Input
               icon={Mail}
               type="email"
-              placeholder="Email Address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-
-            <div className="flex gap-3">
-              <div className="relative w-28 shrink-0">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                  <Globe size={20} />
-                </div>
-                <select
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  className="w-full pl-10 pr-2 py-3 glass-input rounded-xl appearance-none cursor-pointer"
-                >
-                  <option value="+91">+91</option>
-                  <option value="+1">+1</option>
-                  <option value="+44">+44</option>
-                  <option value="+61">+61</option>
-                </select>
-              </div>
-              <Input
-                icon={Phone}
-                type="tel"
-                placeholder="Mobile Number"
-                value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
-                required
-                containerClassName="flex-1"
-              />
-            </div>
-
-            <Input
-              icon={Lock}
-              type="password"
-              placeholder="Password"
-              value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              }
             />
 
             <Button type="submit" isLoading={loading} className="w-full mt-2">

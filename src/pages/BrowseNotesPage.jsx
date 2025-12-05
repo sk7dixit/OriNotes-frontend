@@ -1,11 +1,13 @@
 // src/pages/BrowseNotesPage.jsx
 import React, { useState, useEffect } from 'react';
-import api from '../services/api'; // IMPORTANT: correct relative path
+import { Search, Filter, RefreshCw, X } from 'lucide-react';
+import api from '../services/api';
+import GlassCard from '../components/ui/GlassCard';
+import Select from '../components/ui/Select';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 
-// Simple dropdowns for Course -> Subject -> Semester etc.
-// This component focuses on university-style browsing. It calls onSearch(filters) when user applies selection.
 export default function BrowseNotesPage({ onSearch }) {
-  // Store all available filter options fetched from the backend
   const [availableFilters, setAvailableFilters] = useState({
     courses: [],
     subjects: [],
@@ -13,22 +15,18 @@ export default function BrowseNotesPage({ onSearch }) {
     universities: [],
   });
 
-  // State for user selections
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [semester, setSemester] = useState('');
   const [loadingFilters, setLoadingFilters] = useState(false);
   const [error, setError] = useState('');
 
-  // PHASE 1 FIX: Fetch ALL available filters on component mount
   useEffect(() => {
     const fetchAllFilters = async () => {
       setLoadingFilters(true);
       setError('');
       try {
-        // This endpoint was added in the backend fix
         const res = await api.get('/notes/available-subjects');
-        // Expecting data: { subjects: [...], courses: [...], fields: [...], universities: [...] }
         setAvailableFilters(res.data);
       } catch (err) {
         console.error('Failed to fetch available filters:', err);
@@ -45,7 +43,7 @@ export default function BrowseNotesPage({ onSearch }) {
     const filters = {
       course: selectedCourse || undefined,
       subject: selectedSubject || undefined,
-      semester: semester || undefined // Assuming semester is a number/string field, not from a discrete list
+      semester: semester || undefined
     };
     onSearch && onSearch(filters);
   };
@@ -54,52 +52,81 @@ export default function BrowseNotesPage({ onSearch }) {
     setSelectedCourse('');
     setSelectedSubject('');
     setSemester('');
-    onSearch && onSearch({}); // Trigger search with empty filters
+    onSearch && onSearch({});
   };
 
   if (loadingFilters) {
-    return <div className="bg-gray-800 p-6 rounded-lg text-white text-center">Loading browsing options...</div>;
+    return (
+      <GlassCard className="p-8 text-center animate-pulse">
+        <p className="text-cyan-400 font-medium">Loading browsing options...</p>
+      </GlassCard>
+    );
   }
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg">
-      <h2 className="text-2xl font-semibold text-white mb-4">Refine by Course / Subject</h2>
+    <GlassCard className="p-6 md:p-8 mb-8">
+      <div className="flex items-center space-x-3 mb-6 border-b border-slate-700/50 pb-4">
+        <Filter className="w-6 h-6 text-cyan-400" />
+        <h2 className="text-2xl font-bold text-white">Refine by Course / Subject</h2>
+      </div>
 
-      <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label className="block text-gray-400 mb-2">Course</label>
-          <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className="w-full p-2 rounded bg-gray-700">
-            <option value="">-- Select Course --</option>
-            {availableFilters.courses.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <Select
+            label="Course"
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(e.target.value)}
+            options={availableFilters.courses.map(c => ({ value: c, label: c }))}
+            placeholder="Select Course"
+          />
         </div>
 
         <div>
-          <label className="block text-gray-400 mb-2">Subject</label>
-          {/* We now show all available subjects fetched on load */}
-          <select value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)} className="w-full p-2 rounded bg-gray-700">
-            <option value="">-- Select Subject --</option>
-            {availableFilters.subjects.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <Select
+            label="Subject"
+            value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)}
+            options={availableFilters.subjects.map(s => ({ value: s, label: s }))}
+            placeholder="Select Subject"
+          />
         </div>
 
         <div>
-          <label className="block text-gray-400 mb-2">Semester (optional)</label>
-          <input value={semester} onChange={(e) => setSemester(e.target.value)} placeholder="e.g., 1, 2, 3..." className="w-full p-2 rounded bg-gray-700" />
+          <Input
+            label="Semester (Optional)"
+            value={semester}
+            onChange={(e) => setSemester(e.target.value)}
+            placeholder="e.g., 1, 2, 3..."
+          />
         </div>
 
-        {/* You can add Field and University filters similarly if needed for the UI */}
-
-        <div className="sm:col-span-3 flex gap-2 mt-2">
-          <button type="submit" className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded">
+        <div className="md:col-span-3 flex flex-col sm:flex-row gap-4 mt-4 pt-4 border-t border-slate-700/50">
+          <Button
+            type="submit"
+            variant="primary"
+            icon={Search}
+            className="w-full sm:w-auto"
+          >
             Get Notes
-          </button>
-          <button type="button" onClick={handleClear} className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded">
-            Clear
-          </button>
-          {error && <p className="text-red-400 ml-4">{error}</p>}
+          </Button>
+
+          <Button
+            type="button"
+            onClick={handleClear}
+            variant="secondary"
+            icon={X}
+            className="w-full sm:w-auto"
+          >
+            Clear Filters
+          </Button>
+
+          {error && (
+            <div className="flex items-center text-red-400 text-sm ml-0 sm:ml-auto mt-2 sm:mt-0 bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20">
+              <span>{error}</span>
+            </div>
+          )}
         </div>
       </form>
-    </div>
+    </GlassCard>
   );
 }

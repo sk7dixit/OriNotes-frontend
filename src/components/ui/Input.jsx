@@ -4,6 +4,7 @@ const Input = ({
     label,
     error,
     icon: Icon,
+    rightElement,
     className = '',
     containerClassName = '',
     ...props
@@ -22,9 +23,14 @@ const Input = ({
                     </div>
                 )}
                 <input
-                    className={`glass-input w-full rounded-xl py-3 ${Icon ? 'pl-12' : 'pl-4'} pr-4 text-slate-100 placeholder-slate-500 ${error ? 'border-red-500 focus:border-red-500' : ''} ${className}`}
+                    className={`glass-input w-full rounded-xl py-3 ${Icon ? 'pl-12' : 'pl-4'} ${rightElement ? 'pr-12' : 'pr-4'} text-slate-100 placeholder-slate-500 ${error ? 'border-red-500 focus:border-red-500' : ''} ${className}`}
                     {...props}
                 />
+                {rightElement && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer z-10">
+                        {rightElement}
+                    </div>
+                )}
             </div>
             {error && (
                 <span className="text-xs text-red-400 ml-1 animate-fade-in-up">

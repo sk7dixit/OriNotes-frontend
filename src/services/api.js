@@ -174,7 +174,7 @@ export async function logout() {
   } finally {
     try {
       clearAccessToken();
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 

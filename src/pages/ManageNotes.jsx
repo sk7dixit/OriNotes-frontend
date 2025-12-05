@@ -106,10 +106,10 @@ export default function ManageNotes() {
     setError("");
 
     try {
-      const res = await api.get("/notes/admin/pending");
+      const res = await api.get("/notes/admin/all");
       setPending(res.data || []);
     } catch (err) {
-      setError("Failed to fetch pending notes.");
+      setError("Failed to fetch notes.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -128,14 +128,14 @@ export default function ManageNotes() {
     }
   }
 
-  async function handleReject(id, reason) {
+  async function handleDelete(id) {
+    if (!window.confirm("Are you sure you want to delete this note?")) return;
     setActionLoading(true);
     try {
-      await api.put(`/notes/admin/review/${id}`, { action: "reject", reason });
+      await api.delete(`/notes/${id}`);
       setPending(prev => prev.filter(n => n.id !== id));
-      setRejectTarget(null);
     } catch (err) {
-      setError("Reject failed");
+      setError("Delete failed");
     } finally {
       setActionLoading(false);
     }
@@ -144,7 +144,7 @@ export default function ManageNotes() {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <h1 className="text-2xl sm:text-3xl font-bold text-cyan-300 mb-6">
-        Pending Notes (Admin Review)
+        Manage All Notes
       </h1>
 
       {error && (
@@ -191,18 +191,10 @@ export default function ManageNotes() {
 
               <button
                 disabled={actionLoading}
-                onClick={() => handleApprove(note.id)}
-                className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white text-sm disabled:opacity-40"
-              >
-                Approve
-              </button>
-
-              <button
-                disabled={actionLoading}
-                onClick={() => setRejectTarget(note)}
+                onClick={() => handleDelete(note.id)}
                 className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white text-sm disabled:opacity-40"
               >
-                Reject
+                Delete
               </button>
             </div>
           </div>

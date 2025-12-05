@@ -1,211 +1,109 @@
 // src/pages/MyNotes.jsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom'; // Import useSearchParams
-import api from '../services/api';
+import React, { useEffect, useState } from "react";
+import api from "../services/api";
+import { X } from "lucide-react";
 
-const formatDate = (dateString) => new Date(dateString).toLocaleString();
-
-const StatusBadge = ({ status }) => {
-    const styles = {
-        pending: 'bg-yellow-500/20 text-yellow-400',
-        approved: 'bg-green-500/20 text-green-400',
-        rejected: 'bg-red-500/20 text-red-400',
-    };
-    return (
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${styles[status]}`}>
-            {status ? status.toUpperCase() : 'N/A'}
-        </span>
-    );
-};
-
-// --- Empty State Component (New) ---
-const EmptyState = ({ onNavigate }) => (
-    <div className="text-center py-16 bg-gray-800 rounded-xl border border-gray-700 shadow-xl">
-        <p className="text-6xl mb-4">🚀</p>
-        <h2 className="text-2xl font-bold text-gray-300 mb-4">No Uploaded Notes Found!</h2>
-        <p className="text-gray-500 mb-6">Be the first to share your knowledge with the community.</p>
-        <button
-            onClick={() => onNavigate('/my-uploads')}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors text-lg"
-        >
-            Upload Your First Note
-        </button>
-    </div>
-);
-
-
-function MyNotes() {
+export default function MyNotes() {
     const [notes, setNotes] = useState([]);
-    const [selectedIds, setSelectedIds] = useState(new Set());
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const navigate = useNavigate();
-
-    // PHASE 4 FIX: Read query parameter for filtering
-    const [searchParams, setSearchParams] = useSearchParams();
-    const filterStatus = searchParams.get('status');
-
-    const fetchMyNotes = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError('');
-            const response = await api.get('/notes/me'); // Changed to /notes/me for consistency
-            setNotes(response.data);
-        } catch (err) {
-            console.error("Failed to fetch my notes:", err);
-            setError('Failed to load your notes. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const [error, setError] = useState("");
+    const [selectedPdf, setSelectedPdf] = useState(null);
 
     useEffect(() => {
         fetchMyNotes();
-    }, [fetchMyNotes]);
+    }, []);
 
-    // Filter the notes based on the URL query parameter (for MyStats integration)
-    const filteredNotes = useMemo(() => {
-        if (!filterStatus) return notes;
-        return notes.filter(note => note.approval_status === filterStatus);
-    }, [notes, filterStatus]);
-
-    const handleSelect = (id) => {
-        const newSelectedIds = new Set(selectedIds);
-        if (newSelectedIds.has(id)) {
-            newSelectedIds.delete(id);
-        } else {
-            newSelectedIds.add(id);
-        }
-        setSelectedIds(newSelectedIds);
-    };
-
-    const handleSelectAll = (e) => {
-        if (e.target.checked) {
-            setSelectedIds(new Set(filteredNotes.map(n => n.id)));
-        } else {
-            setSelectedIds(new Set());
-        }
-    };
-
-    const handleDeleteSelected = async () => {
-        if (selectedIds.size === 0) return;
-        if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} notes? This cannot be undone.`)) return;
-
+    async function fetchMyNotes() {
+        setLoading(true);
         try {
-            // NOTE: Assuming backend endpoint is /api/notes/delete
-            await api.post('/notes/delete', { noteIds: Array.from(selectedIds) });
-            setSelectedIds(new Set());
-            fetchMyNotes(); // Refresh the list
+            const res = await api.get("/notes/me");
+            setNotes(res.data || []);
         } catch (err) {
-            alert('Failed to delete notes. Please try again.');
+            setError("Failed to fetch your notes.");
+        } finally {
+            setLoading(false);
         }
-    };
-
-    // Clear filter handler
-    const handleClearFilter = () => {
-        setSearchParams({});
-    };
-
-
-    if (loading) {
-        return <p className="text-center text-gray-400">Loading your notes...</p>;
     }
 
-    if (error) {
-        return <p className="text-center text-red-500">{error}</p>;
-    }
-
-    if (notes.length === 0 && !filterStatus) {
-        // Show empty state only if no notes exist and no filter is actively set
-        return <EmptyState onNavigate={navigate} />;
+    async function handleDelete(id) {
+        if (!window.confirm("Are you sure you want to delete this note?")) return;
+        try {
+            await api.delete(`/notes/${id}`);
+            setNotes(prev => prev.filter(n => n.id !== id));
+        } catch (err) {
+            alert("Failed to delete note.");
+        }
     }
 
     return (
-        <div className="w-full">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-4xl font-bold text-cyan-400">
-                    My Notes
-                    {filterStatus && (
-                        <span className="text-lg font-normal text-yellow-400 ml-3">
-                            (Filtered: {filterStatus.toUpperCase()})
-                        </span>
-                    )}
-                </h1>
-                <div className="flex space-x-3 items-center">
-                    {filterStatus && (
-                         <button onClick={handleClearFilter} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">
-                            Clear Filter
-                        </button>
-                    )}
-                    {filteredNotes.length > 0 && selectedIds.size > 0 && (
-                        <button onClick={handleDeleteSelected} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">
-                            Delete Selected ({selectedIds.size})
-                        </button>
-                    )}
-                </div>
+        <div className="max-w-6xl mx-auto p-4 sm:p-6">
+            <h1 className="text-3xl font-bold text-cyan-400 mb-6">My Notes</h1>
+
+            {loading && <p className="text-gray-300">Loading...</p>}
+            {error && <p className="text-red-400">{error}</p>}
+
+            {!loading && notes.length === 0 && (
+                <p className="text-gray-400">You haven't uploaded any notes yet.</p>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {notes.map(note => (
+                    <div key={note.id} className="bg-gray-800 p-5 rounded-lg border border-gray-700 shadow-lg flex flex-col justify-between">
+                        <div>
+                            <h3 className="text-xl font-semibold text-white mb-2 truncate" title={note.title}>{note.title}</h3>
+                            <p className="text-sm text-gray-400 mb-4">Uploaded: {new Date(note.created_at).toLocaleDateString()}</p>
+
+                            <div className="mb-4">
+                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${note.approval_status === 'approved' ? 'bg-green-900 text-green-300' :
+                                        note.approval_status === 'rejected' ? 'bg-red-900 text-red-300' :
+                                            'bg-yellow-900 text-yellow-300'
+                                    }`}>
+                                    {note.approval_status}
+                                </span>
+                                {note.approval_status === 'rejected' && note.rejection_reason && (
+                                    <p className="text-red-400 text-xs mt-2">Reason: {note.rejection_reason}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-2">
+                            <button
+                                onClick={() => setSelectedPdf({ id: note.id, title: note.title })}
+                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 py-2 rounded text-white text-sm transition"
+                            >
+                                View
+                            </button>
+                            <button
+                                onClick={() => handleDelete(note.id)}
+                                className="flex-1 bg-red-600 hover:bg-red-700 py-2 rounded text-white text-sm transition"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
 
-            {filteredNotes.length > 0 ? (
-                <div className="bg-gray-800 rounded-lg shadow-xl overflow-hidden">
-                    <table className="min-w-full">
-                        <thead className="bg-gray-700">
-                            <tr>
-                                <th className="p-4 text-left"><input type="checkbox" checked={selectedIds.size === filteredNotes.length && filteredNotes.length > 0} onChange={handleSelectAll} className="form-checkbox h-4 w-4 text-cyan-600 bg-gray-900 border-gray-600 rounded" /></th>
-                                <th className="py-3 px-4 text-left font-semibold">Title</th>
-                                <th className="py-3 px-4 text-left font-semibold">Status</th>
-                                <th className="py-3 px-4 text-left font-semibold">Date Uploaded</th>
-                                <th className="py-3 px-4 text-left font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700">
-                            {filteredNotes.map(note => (
-                                <tr key={note.id} className="hover:bg-gray-700/50">
-                                    <td className="p-4"><input type="checkbox" checked={selectedIds.has(note.id)} onChange={() => handleSelect(note.id)} className="form-checkbox h-4 w-4 text-cyan-600 bg-gray-900 border-gray-600 rounded" /></td>
-                                    <td className="py-3 px-4">{note.title}</td>
-                                    <td className="py-3 px-4"><StatusBadge status={note.approval_status} /></td>
-                                    <td className="py-3 px-4 text-gray-400">{formatDate(note.created_at)}</td>
-                                    <td className="py-3 px-4 flex space-x-2">
-                                        {/* View Button */}
-                                        <button
-                                            onClick={() => navigate(`/notes/view/${note.id}`)}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded text-sm"
-                                        >
-                                            View
-                                        </button>
-
-                                        {/* Edit Button (Only for pending or rejected notes) */}
-                                        {(note.approval_status === 'pending' || note.approval_status === 'rejected') && (
-                                            <button
-                                                onClick={() => navigate(`/edit-note/${note.id}`)}
-                                                className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-3 rounded text-sm"
-                                            >
-                                                Edit
-                                            </button>
-                                        )}
-
-                                        {/* Version Button (For approved notes) */}
-                                        {note.approval_status === 'approved' && (
-                                            <button
-                                                onClick={() => navigate(`/notes/view/${note.id}`)} // Navigate to a page with version uploader or integrate modal
-                                                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded text-sm"
-                                            >
-                                                New Version
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {/* PDF Modal */}
+            {selectedPdf && (
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4">
+                    <div className="bg-gray-900 w-full h-full sm:w-[90%] sm:h-[90%] rounded-lg overflow-hidden flex flex-col shadow-2xl">
+                        <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+                            <h2 className="text-lg font-bold text-white truncate">{selectedPdf.title}</h2>
+                            <button onClick={() => setSelectedPdf(null)} className="p-2 hover:bg-gray-700 rounded text-gray-300">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="flex-1 bg-black">
+                            <iframe
+                                src={`/api/notes/${selectedPdf.id}/view`}
+                                title={selectedPdf.title}
+                                className="w-full h-full border-0"
+                            />
+                        </div>
+                    </div>
                 </div>
-            ) : (
-                <p className="text-center text-gray-400 p-6 bg-gray-800 rounded-xl">
-                    No notes found under the selected filter: **{filterStatus.toUpperCase()}**.
-                    {filterStatus === 'approved' && <span className='block mt-2'>Your note may be in pending review.</span>}
-                </p>
             )}
         </div>
     );
 }
-
-export default MyNotes;

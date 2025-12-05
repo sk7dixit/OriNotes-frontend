@@ -16,7 +16,7 @@ function ApprovalRequests() {
   const fetchPendingNotes = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/notes/pending-approval');
+      const response = await api.get('/notes/admin/pending');
       setNotes(response.data);
     } catch (err) {
       setError('Failed to load approval requests.');
@@ -28,19 +28,19 @@ function ApprovalRequests() {
   const handleReview = async (noteId, action) => {
     let reason = '';
     if (action === 'reject') {
-        reason = prompt("Please provide a reason for rejecting this note:");
-        if (!reason) {
-            alert("Rejection requires a reason.");
-            return;
-        }
+      reason = prompt("Please provide a reason for rejecting this note:");
+      if (!reason) {
+        alert("Rejection requires a reason.");
+        return;
+      }
     }
 
     try {
-        await api.put(`/notes/review/${noteId}`, { action, reason });
-        // Refresh the list after reviewing
-        fetchPendingNotes();
+      await api.put(`/notes/review/${noteId}`, { action, reason });
+      // Refresh the list after reviewing
+      fetchPendingNotes();
     } catch (err) {
-        alert(`Failed to ${action} the note.`);
+      alert(`Failed to ${action} the note.`);
     }
   };
 

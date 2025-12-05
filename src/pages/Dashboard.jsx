@@ -42,7 +42,7 @@ const Dashboard = () => {
             <header className="p-4 bg-[#121a28] shadow-lg sticky top-0 z-20">
                 <div className="flex items-center justify-between">
                     <div className="md:block">
-                         <h1 className="text-xl font-bold text-gray-50 md:text-2xl whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] sm:max-w-none">
+                        <h1 className="text-xl font-bold text-gray-50 md:text-2xl whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] sm:max-w-none">
                             Welcome Back, <span className="text-cyan-400">{user?.name || 'User'}!</span>
                         </h1>
                     </div>
@@ -55,7 +55,7 @@ const Dashboard = () => {
             <main className="p-4 md:p-8">
 
                 {/* Ready for more? Section (Buttons) - PHASE 3 FIX: MOVED HIGHER */}
-                <div className="mb-8 p-6 bg-[#1f283a] rounded-xl shadow-lg border border-gray-700">
+                <div className="mb-8 p-4 sm:p-6 bg-[#1f283a] rounded-xl shadow-lg border border-gray-700">
                     <h3 className="text-2xl font-bold text-cyan-400 mb-3">Ready for more?</h3>
                     <p className="text-gray-300 mb-6">
                         Contribute to the community or find the perfect notes for your next exam.
