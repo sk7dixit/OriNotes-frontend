@@ -49,15 +49,15 @@ function AdminSidebar() {
           <NotesIcon />
           <span>Manage Notes</span>
         </NavLink>
-        <NavLink to="/admin/users" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
+        <NavLink to="/active-users" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
           <UsersIcon />
           <span>Active Users</span>
         </NavLink>
-        <NavLink to="/admin/approvals" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
+        <NavLink to="/approval-requests" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
           <ApprovalIcon />
           <span>Approvals</span>
         </NavLink>
-        <NavLink to="/admin/submissions" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
+        <NavLink to="/user-submissions" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
           <SubmissionsIcon />
           <span>Submissions</span>
         </NavLink>
@@ -65,7 +65,7 @@ function AdminSidebar() {
           <BadgeIcon />
           <span>Badges</span>
         </NavLink>
-        <NavLink to="/admin/settings" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
+        <NavLink to="/admin-settings" onClick={handleNavClick} style={({ isActive }) => isActive ? activeLinkStyle : undefined} className="flex items-center space-x-3 text-gray-400 hover:text-white transition-colors p-3 rounded-lg hover:bg-gray-800">
           <SettingsIcon />
           <span>Settings</span>
         </NavLink>

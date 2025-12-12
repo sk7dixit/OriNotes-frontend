@@ -47,13 +47,34 @@ export const AuthProvider = ({ children }) => {
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(storedUser);
+
+          // Set Authorization header for api calls
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+
           fetchUnreadCount();
+
+          // Background sync to get latest global settings (e.g. valid subscription)
+          api.get('/users/profile')
+            .then(({ data }) => {
+              setUser(data);
+              sessionStorage.setItem('user', JSON.stringify(data));
+            })
+            .catch((err) => {
+              console.warn("Background profile sync failed", err);
+              // If 401, it means token expired, we might want to fall through to refresh flow?
+              // For now, let the interceptors or refresh flow handle it if next request fails.
+            });
+
           return;
         }
 
         // 2. If no session, attempt to refresh token via cookie
         console.log("Attempting token refresh via cookie...");
-        const refreshResponse = await api.post('/users/refresh-token');
+        // Add timeout to prevent infinite loading
+        const refreshPromise = api.post('/users/refresh-token');
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 5000));
+
+        const refreshResponse = await Promise.race([refreshPromise, timeoutPromise]);
 
         // Success: Backend returned a new access token
         const newAccessToken = refreshResponse.data.token;
@@ -88,15 +109,15 @@ export const AuthProvider = ({ children }) => {
     const currentToken = sessionStorage.getItem('token');
     if (!currentToken) return;
     try {
-        const { data } = await api.get('/users/profile');
-        // Update both the React state and the session storage
-        setUser(data);
-        sessionStorage.setItem('user', JSON.stringify(data));
-        console.log("User data refreshed:", data);
+      const { data } = await api.get('/users/profile');
+      // Update both the React state and the session storage
+      setUser(data);
+      sessionStorage.setItem('user', JSON.stringify(data));
+      console.log("User data refreshed:", data);
     } catch (error) {
-        console.error("Failed to refresh user data:", error);
-        // If token is invalid, log the user out
-        logout();
+      console.error("Failed to refresh user data:", error);
+      // If token is invalid, log the user out
+      logout();
     }
   }, [logout]);
 
@@ -124,7 +145,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={contextValue}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

@@ -1,17 +1,29 @@
-// src/pages/Notes.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { debounce } from 'lodash';
-import BrowseNotesPage from './BrowseNotesPage'; // The advanced filter component
-import { Filter, X, Search } from 'lucide-react'; // Lucide icons for UI
+import BrowseNotesPage from './BrowseNotesPage';
+import FilterBar from '../components/FilterBar';
+import { Filter, X, Search, Zap, Clock, TrendingUp } from 'lucide-react';
+import NoteCard from '../components/ui/NoteCard';
+import Skeleton from '../components/ui/Skeleton';
 
-// --- Configuration ---
+// Custom debounce
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
 const INITIAL_SORT = 'newest';
 const DEBOUNCE_DELAY = 500;
 
-// Group notes by institution (keeps existing grouping behavior)
 const groupNotesByInstitution = (notes) => {
   if (!notes) return {};
   return notes.reduce((acc, note) => {
@@ -22,91 +34,39 @@ const groupNotesByInstitution = (notes) => {
   }, {});
 };
 
-// --- NoteCard Component (Simplified/Placeholdered) ---
-// NOTE: This component needs full Phase 3 update later, but its logic is fine for now.
-const NoteCard = ({ note, user, navigate, isFavourite, onToggleFavourite }) => {
-  const isSubscribed = user?.subscription_expiry && new Date(user.subscription_expiry) > new Date();
-  const hasAccess = note.is_free || isSubscribed || user?.role === 'admin';
-  const canUseFreeViews = !isSubscribed && user && typeof user.free_views === 'number' && user.free_views > 0;
-
-  const handleViewClick = () => {
-    navigate(`/notes/view/${note.id}`);
-  };
-
-  // PHASE 3 UX: Placeholder for Average Rating and Date
-  const averageRating = note.average_rating ? note.average_rating.toFixed(1) : '—';
-  const uploadedDate = note.created_at ? new Date(note.created_at).toLocaleDateString() : 'N/A';
-
-  return (
-    <div className={`p-4 bg-gray-800 rounded-lg border ${hasAccess || canUseFreeViews ? 'border-gray-700' : 'border-red-500/50'} flex flex-col justify-between`}>
-      <div>
-        <h3 className="text-xl font-bold truncate">{note.title}</h3>
-        <p className="text-gray-400 text-sm mb-1">By: {note.username || note.uploader || 'Unknown'}</p>
-        {/* PHASE 3 UX: Added rating/date to card */}
-        <p className="text-gray-500 text-xs">Rating: {averageRating} ★ | Views: {note.view_count ?? 0} | Date: {uploadedDate}</p>
-        <p className="text-gray-400 text-sm mt-2">{note.course ? `${note.course} — ${note.subject || ''}` : note.subject}</p>
-      </div>
-
-      <div className="flex items-center space-x-2 mt-4">
-        {(hasAccess || canUseFreeViews) ? (
-          <button
-            onClick={handleViewClick}
-            className="flex-grow bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors"
-          >
-            {canUseFreeViews && !hasAccess ? `🔓 View (Free ${user.free_views}/2)` : '🔓 View Note'}
-          </button>
-        ) : (
-          user?.is_subscription_enabled ? (
-            <button onClick={() => navigate('/subscribe')} className="flex-grow bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition-colors flex items-center justify-center">
-              🔒 <span className="ml-1">OriPro</span>
-            </button>
-          ) : (
-            <p className="text-sm text-yellow-400">Subscriptions disabled</p>
-          )
-        )}
-
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleFavourite(note.id); }}
-          className={`p-2 rounded ${isFavourite ? 'text-red-500' : 'text-gray-400 hover:text-white'}`}
-          title={isFavourite ? "Remove from Favourites" : "Add to Favourites"}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={isFavourite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
-// --- Main Notes Page Component ---
 export default function Notes() {
-  const [notes, setNotes] = useState([]);
+  const [notes, setNotes] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [favouriteIds, setFavouriteIds] = useState(new Set());
-
-  // PHASE 3 FIX: State to manage filter visibility and currently applied filters
   const [showFilters, setShowFilters] = useState(false);
   const [currentFilters, setCurrentFilters] = useState({ sort: INITIAL_SORT });
+  const [overflowVisible, setOverflowVisible] = useState(false);
+  const [activeTag, setActiveTag] = useState('All');
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuth(); // eslint-disable-line no-unused-vars
 
-  const groupedNotes = groupNotesByInstitution(notes);
+  // Overflow handling for filter animation
+  useEffect(() => {
+    let timer;
+    if (showFilters) {
+      timer = setTimeout(() => setOverflowVisible(true), 500);
+    } else {
+      setOverflowVisible(false);
+    }
+    return () => clearTimeout(timer);
+  }, [showFilters]);
 
-  // Checks if any filters other than the default sort are active
+  const groupedNotes = groupNotesByInstitution(notes || []);
   const isFilterActive = Object.keys(currentFilters).some(key => key !== 'sort' && currentFilters[key]);
 
-  // Fetch notes based on current filters/sort
   const fetchNotes = useCallback(async (filters) => {
     setLoading(true);
     setError('');
-    setCurrentFilters(filters); // Save the applied filters
+    setCurrentFilters(filters);
 
-    // Convert object filters to URL params, excluding null/undefined
     const params = Object.keys(filters).reduce((acc, key) => {
       if (filters[key]) acc[key] = filters[key];
       return acc;
@@ -117,7 +77,7 @@ export default function Notes() {
       setNotes(res.data || []);
     } catch (err) {
       console.error('Error fetching notes:', err);
-      setError('Failed to fetch notes. Please try again.');
+      setError('Failed to fetch notes.');
     } finally {
       setLoading(false);
     }
@@ -127,66 +87,27 @@ export default function Notes() {
     fetchNotes({ ...currentFilters, q });
   }, DEBOUNCE_DELAY), [currentFilters, fetchNotes]);
 
-  // PHASE 3 FIX: 1. Initial Load (Hybrid Browsing)
+  // Initial Load
   useEffect(() => {
-    // Only fetch default notes on initial mount
-    if (notes.length === 0 && !loading && !searchQuery) {
-        fetchNotes({ sort: INITIAL_SORT });
+    if (notes === null && !loading && !searchQuery) {
+      fetchNotes({ sort: INITIAL_SORT });
     }
-  }, [fetchNotes, notes.length, loading, searchQuery]);
+  }, [fetchNotes, notes, loading, searchQuery]);
 
-  // Handle Search Query changes (debounced)
+  // Search Handler
   useEffect(() => {
     if (searchQuery.length > 2) {
       debouncedFetch(searchQuery);
-    } else if (searchQuery.length === 0 && isFilterActive) {
-        // If search is cleared but filters are active, re-fetch based on filters
-        fetchNotes(currentFilters);
-    } else if (searchQuery.length === 0 && !isFilterActive && notes.length > 0) {
-        // If search is cleared and no filters active, do nothing (maintain default view)
+    } else if (searchQuery.length === 0 && notes !== null) {
+      fetchNotes(currentFilters);
     }
-  }, [searchQuery, debouncedFetch, isFilterActive]);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch Favourites IDs
-  useEffect(() => {
-    const fetchFavourites = async () => {
-      try {
-        const res = await api.get('/notes/favourites/ids');
-        setFavouriteIds(new Set(res.data || []));
-      } catch (err) {
-        console.error('Could not fetch favourites');
-      }
-    };
-    fetchFavourites();
-  }, []);
-
-  const handleToggleFavourite = async (noteId) => {
-    const isFavourite = favouriteIds.has(noteId);
-    const newFavouriteIds = new Set(favouriteIds);
-    try {
-      if (isFavourite) {
-        await api.delete(`/notes/favourites/${noteId}`);
-        newFavouriteIds.delete(noteId);
-      } else {
-        await api.post(`/notes/favourites/${noteId}`);
-        newFavouriteIds.add(noteId);
-      }
-      setFavouriteIds(newFavouriteIds);
-    } catch (err) {
-      alert('Failed to update favourites.');
-    }
-  };
-
-  // Called by BrowseNotesPage when using the university flow
   const handleAdvancedSearch = (filters) => {
-    setShowFilters(false); // Close filters after applying
-    // Merge advanced filters with current state, overwriting sort if provided
+    setShowFilters(false);
     const newFilters = { ...currentFilters, ...filters, material_type: 'university' };
-    // Remove empty strings from filters
     Object.keys(newFilters).forEach(key => {
-        if (newFilters[key] === '' || newFilters[key] === null) {
-            delete newFilters[key];
-        }
+      if (newFilters[key] === '' || newFilters[key] === null) delete newFilters[key];
     });
     fetchNotes(newFilters);
   };
@@ -194,93 +115,145 @@ export default function Notes() {
   const handleResetFlow = () => {
     setShowFilters(false);
     setSearchQuery('');
+    setActiveTag('All');
     fetchNotes({ sort: INITIAL_SORT });
   };
 
-  // Helper to construct filter status display
   const filterCount = Object.keys(currentFilters).filter(key => key !== 'sort' && currentFilters[key]).length;
 
+  const smartTags = [
+    { name: 'All', icon: null },
+    { name: 'Most Popular', icon: TrendingUp, sort: 'popular' },
+    { name: 'Recently Added', icon: Clock, sort: 'newest' },
+    { name: 'Trending', icon: Zap, sort: 'trending' },
+  ];
+
+  const handleTagClick = (tag) => {
+    setActiveTag(tag.name);
+    if (tag.sort) {
+      fetchNotes({ ...currentFilters, sort: tag.sort });
+    } else {
+      fetchNotes({ sort: INITIAL_SORT });
+    }
+  };
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-        <h1 className="text-4xl font-bold text-cyan-400">Browse Notes</h1>
+    <div className="w-full space-y-8 animate-fade-in-up pb-12">
+      {/* Header & Search */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h1 className="text-4xl font-bold text-white mb-2">Browse Notes</h1>
+          <p className="text-slate-400">Discover study materials from top universities.</p>
+        </div>
 
-        {/* Search Input */}
-        <div className="relative w-full sm:w-1/2 md:w-1/3">
+        <div className="relative w-full md:w-96 group">
+          <div className={`absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl blur transition-opacity duration-500 ${searchQuery ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
           <input
             type="text"
-            placeholder="Quick search by title..."
+            placeholder="Search by title, subject, or author..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            className="relative w-full glass-input pl-11 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-indigo-500/50"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
         </div>
       </div>
 
-      {/* Control Bar: Advanced Filters & Reset */}
-      <div className="flex gap-4 mb-8">
+      {/* Smart Tags & Filter Toggle */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto scrollbar-hide">
+          {smartTags.map(tag => (
+            <button
+              key={tag.name}
+              onClick={() => handleTagClick(tag)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap
+                        ${activeTag === tag.name
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                  : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white border border-white/5'
+                }`}
+            >
+              {tag.icon && <tag.icon size={14} />}
+              {tag.name}
+            </button>
+          ))}
+        </div>
 
-        {/* Advanced Filters Button */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2
-             ${showFilters ? 'bg-indigo-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
+          className={`px-5 py-2 rounded-xl font-medium transition-all flex items-center gap-2 border whitespace-nowrap
+                 ${showFilters
+              ? 'bg-slate-700 text-white border-slate-600'
+              : 'bg-slate-800/50 text-slate-300 border-white/5 hover:bg-slate-700'}`}
         >
-          <Filter className="w-5 h-5" />
-          {showFilters ? 'Hide Filters' : `Advanced Filters ${filterCount > 0 ? `(${filterCount} active)` : ''}`}
+          <Filter className="w-4 h-4" />
+          {showFilters ? 'Hide Filters' : 'Filters'}
+          {filterCount > 0 && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-[10px] text-white ml-1">{filterCount}</span>}
         </button>
-
-        {/* Start Over Button (Visible when filters or search are active) */}
-        {(isFilterActive || searchQuery.length > 0) && (
-            <button onClick={handleResetFlow} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
-                <X className="w-5 h-5" /> Start Over
-            </button>
-        )}
       </div>
 
-      {/* PHASE 3 FIX: Advanced filter collapse/expand */}
-      <div className={`transition-all duration-500 ease-in-out overflow-hidden ${showFilters ? 'max-h-[800px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>
-         <BrowseNotesPage onSearch={handleAdvancedSearch} />
+      {/* Advanced Filter Panel */}
+      <div className={`transition-all duration-500 ease-in-out relative z-30 ${showFilters ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'} ${overflowVisible ? 'overflow-visible' : 'overflow-hidden'}`}>
+        <div className="glass-panel p-1 rounded-2xl">
+          <FilterBar
+            currentFilters={currentFilters}
+            onFilterChange={handleAdvancedSearch}
+            onClearFilters={handleResetFlow}
+          />
+        </div>
       </div>
 
-
-      {/* Results Section */}
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold text-gray-300 mb-4">
-            {isFilterActive || searchQuery ? 'Search Results' : (currentFilters.sort === 'newest' ? 'Newest Notes' : 'Most Popular')}
-             {notes.length > 0 ? ` (${notes.length} found)` : ''}
-        </h2>
-
+      {/* Results Content */}
+      <div className="space-y-10 min-h-[400px]">
         {loading ? (
-          <p className="text-center text-gray-400">Loading...</p>
-        ) : error ? (
-          <p className="text-red-500">{error}</p>
-        ) : notes.length > 0 ? (
+          // Skeleton Loading
           <div className="space-y-8">
-            {Object.entries(groupedNotes).map(([institution, institutionNotes]) => (
-              <div key={institution}>
-                <h3 className="text-xl font-bold text-cyan-400 mb-4 border-b border-gray-700 pb-2">{institution}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {institutionNotes.map(note => (
-                    <NoteCard
-                      key={note.id}
-                      note={note}
-                      user={user}
-                      navigate={navigate}
-                      isFavourite={favouriteIds.has(note.id)}
-                      onToggleFavourite={handleToggleFavourite}
-                    />
-                  ))}
+            {[1, 2].map(grp => (
+              <div key={grp} className="space-y-4">
+                <Skeleton className="w-48 h-8" />
+                <div className="flex gap-6 overflow-hidden">
+                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="min-w-[280px] h-64 rounded-2xl" />)}
                 </div>
               </div>
             ))}
           </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <div className="inline-flex p-4 rounded-full bg-red-500/10 text-red-400 mb-4"><X size={32} /></div>
+            <p className="text-slate-300 mb-2">{error}</p>
+            <button onClick={() => fetchNotes({ sort: INITIAL_SORT })} className="text-indigo-400 hover:underline">Try Reloading</button>
+          </div>
+        ) : notes && notes.length > 0 ? (
+          Object.entries(groupedNotes).map(([institution, institutionNotes]) => (
+            <div key={institution} className="animate-fade-in-up">
+              <div className="flex items-center justify-between mb-4 px-1">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="w-1 h-6 rounded-full bg-indigo-500 block"></span>
+                  {institution}
+                </h3>
+                <button className="text-xs font-semibold text-slate-500 hover:text-white uppercase tracking-wider transition-colors">View All</button>
+              </div>
+
+              {/* Horizontal Carousel Container */}
+              <div className="flex gap-6 overflow-x-auto pb-6 -mx-4 px-4 scrollbar-hide snap-x">
+                {institutionNotes.map(note => (
+                  <div key={note.id} className="min-w-[280px] md:min-w-[320px] snap-start">
+                    <NoteCard
+                      note={note}
+                      onClick={() => { navigate(`/notes/view/${note.id}`) }}
+                      user={user} // Pass user/auth info if needed for access checks logic inside card
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
         ) : (
-          <p className="text-gray-400 p-6 bg-gray-800 rounded-lg">
-            No notes found for your current search or filter criteria. Try expanding your search or using the Advanced Filters.
-          </p>
+          <div className="text-center py-24 glass-panel border-dashed">
+            <Search className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">No notes found</h3>
+            <p className="text-slate-400 max-w-md mx-auto mb-6">We couldn't find any notes matching your search. Try adjusting your filters or keywords.</p>
+            <button onClick={handleResetFlow} className="btn-primary">Clear All Filters</button>
+          </div>
         )}
       </div>
     </div>

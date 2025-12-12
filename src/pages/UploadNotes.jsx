@@ -3,7 +3,7 @@ import React, { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
-import { X, FileText, UploadCloud, CheckCircle, AlertCircle, BookOpen, GraduationCap, Layers } from "lucide-react";
+import { X, FileText, UploadCloud, CheckCircle, AlertCircle, BookOpen, GraduationCap, Layers, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { pdfjs } from "react-pdf";
 import { universityData, courseData, subjectData } from '../services/universityData';
 import GlassCard from '../components/ui/GlassCard';
@@ -14,6 +14,32 @@ import Select from '../components/ui/Select';
 pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
 
 // --- Helper Components ---
+
+const StepIndicator = ({ currentStep, steps }) => (
+  <div className="flex items-center justify-center mb-12">
+    {steps.map((step, index) => {
+      const isCompleted = currentStep > index + 1;
+      const isCurrent = currentStep === index + 1;
+
+      return (
+        <div key={index} className="flex items-center">
+          <div className={`
+                    flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all duration-300
+                    ${isCompleted ? 'bg-green-500 text-white' : isCurrent ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30' : 'bg-gray-800 text-gray-500 border border-gray-700'}
+                `}>
+            {isCompleted ? <Check size={20} /> : index + 1}
+          </div>
+          <div className={`ml-3 mr-3 ${isCurrent ? 'text-white font-medium' : 'text-gray-500'} hidden md:block`}>
+            {step}
+          </div>
+          {index < steps.length - 1 && (
+            <div className={`w-12 h-1 mx-2 rounded-full ${currentStep > index + 1 ? 'bg-green-500/50' : 'bg-gray-800'}`} />
+          )}
+        </div>
+      );
+    })}
+  </div>
+);
 
 const PersonalNoteForm = ({ formData, handleChange }) => {
   const legacyContent = {
@@ -74,7 +100,12 @@ const PersonalNoteForm = ({ formData, handleChange }) => {
 const UniversityNoteForm = ({ uniState, handleUniChange }) => {
   const stateOptions = Object.keys(universityData);
   const institutionTypeOptions = uniState.state ? Object.keys(universityData[uniState.state]) : [];
-  const institutionOptions = uniState.state && uniState.institutionType ? universityData[uniState.state][uniState.institutionType] : [];
+
+  // FIX: Map to .name to ensure we have an array of strings
+  const institutionOptions = uniState.state && uniState.institutionType && universityData[uniState.state] && universityData[uniState.state][uniState.institutionType]
+    ? universityData[uniState.state][uniState.institutionType].map(u => u.name)
+    : [];
+
   const courseOptions = Object.keys(courseData);
   const semesterOptions = uniState.course
     ? Array.from({ length: courseData[uniState.course]?.semesters || 0 }, (_, i) => i + 1)
@@ -184,15 +215,30 @@ const UniversityNoteForm = ({ uniState, handleUniChange }) => {
 
 export default function UploadNotes() {
   const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState(1);
   const [feedback, setFeedback] = useState({ message: '', error: '' });
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [materialType, setMaterialType] = useState("personal_material");
+  const [materialType, setMaterialType] = useState(null); // Initially null to force selection
+
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const [formData, setFormData] = useState({ field: "", course: "", subject: "" });
   const [uniState, setUniState] = useState({
     state: "", institutionType: "", institution: "", otherInstitution: "",
     course: "", semester: "", subject: "", otherSubject: ""
   });
+
+  const steps = ["Material Type", "Note Details", "Upload Files"];
+
+  const playSuccessSound = () => {
+    // Placeholder for audio feedback
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'); // Example success chime
+    audio.volume = 0.5;
+    audio.play().catch(() => { });
+  };
+
+  // --- Handlers ---
 
   const handlePersonalChange = (e) => {
     const { name, value } = e.target;
@@ -261,8 +307,9 @@ export default function UploadNotes() {
         processedFiles.push({
           file,
           preview,
-          title: file.name.replace('.pdf', ''),
-          isFree: false
+          title: file.name.replace('.pdf', '').replace(/[_-]/g, ' '),
+          isFree: false,
+          isPrivate: false
         });
       }
 
@@ -293,15 +340,39 @@ export default function UploadNotes() {
     }
   };
 
-  const handleUpload = async () => {
-    if (files.length === 0) return;
-    if (!isMetadataComplete()) {
-      setFeedback({ error: 'Please complete all selection fields.', message: '' });
+  const handleNext = () => {
+    if (currentStep === 1 && !materialType) {
+      setFeedback({ error: 'Please select a material type.', message: '' });
       return;
     }
+    if (currentStep === 2 && !isMetadataComplete()) {
+      setFeedback({ error: 'Please fill in all details.', message: '' });
+      return;
+    }
+    setFeedback({ message: '', error: '' });
+    setCurrentStep(prev => prev + 1);
+  };
+
+  const handleBack = () => {
+    setFeedback({ message: '', error: '' });
+    setCurrentStep(prev => prev - 1);
+  };
+
+
+  const handleUpload = async () => {
+    if (files.length === 0) return;
 
     setUploading(true);
+    setUploadProgress(0);
     setFeedback({ message: '', error: '' });
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 90) return prev;
+        return prev + 10;
+      });
+    }, 400);
 
     const data = new FormData();
 
@@ -322,17 +393,31 @@ export default function UploadNotes() {
       data.append('files', f.file);
       data.append('titles', f.title);
       data.append('is_free', f.isFree);
-      // Note: We are sending arrays for titles and is_free.
-      // The backend handleMultiUpload expects these to match the files array index.
+      data.append('is_private', f.isPrivate);
     });
 
     try {
       const res = await api.post("/notes/multi-upload", data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      playSuccessSound();
+
       setFeedback({ message: `✅ ${res.data.message}`, error: '' });
       setFiles([]);
+      // Maybe navigate to dashboard or reset
+      setTimeout(() => {
+        setCurrentStep(1);
+        setMaterialType(null);
+        setFeedback({ message: '', error: '' });
+        setUploadProgress(0);
+      }, 3000);
+
     } catch (err) {
+      clearInterval(progressInterval);
+      setUploadProgress(0);
       console.error(err);
       setFeedback({ error: err.response?.data?.error || "❌ Upload failed", message: '' });
     } finally {
@@ -341,179 +426,206 @@ export default function UploadNotes() {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-[#0A0A0C] text-gray-100 font-inter">
+      <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 animate-fade-in">
-            Share Your Knowledge
+        <div className="text-center mb-12">
+          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight">
+            Upload New Notes
           </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto animate-fade-in delay-100">
-            Upload your notes and help students across the platform. Earn badges and recognition for your contributions.
-          </p>
+          <p className="text-gray-400">Share your resources with the community in 3 simple steps.</p>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Wizard Progress */}
+        <StepIndicator currentStep={currentStep} steps={steps} />
 
-          {/* Left Column: Metadata Selection */}
-          <div className="lg:col-span-1 space-y-6">
-            <GlassCard className="p-6">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <BookOpen className="text-cyan-400" size={20} />
-                Note Details
-              </h2>
+        {/* Main Content Card */}
+        <GlassCard className="p-8 md:p-12 relative overflow-hidden min-h-[500px] flex flex-col">
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Material Type</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setMaterialType("personal_material")}
-                      className={`p-3 rounded-lg border transition-all duration-200 flex flex-col items-center gap-2 ${materialType === "personal_material"
-                          ? "bg-cyan-500/20 border-cyan-500 text-white"
-                          : "bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-800"
-                        }`}
-                    >
-                      <Layers size={20} />
-                      <span className="text-sm">Personal</span>
-                    </button>
-                    <button
-                      onClick={() => setMaterialType("university_material")}
-                      className={`p-3 rounded-lg border transition-all duration-200 flex flex-col items-center gap-2 ${materialType === "university_material"
-                          ? "bg-blue-500/20 border-blue-500 text-white"
-                          : "bg-gray-800/50 border-gray-700 text-gray-400 hover:bg-gray-800"
-                        }`}
-                    >
-                      <GraduationCap size={20} />
-                      <span className="text-sm">University</span>
-                    </button>
+          {/* Feedback Messages */}
+          {feedback.error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 animate-fade-in">
+              <AlertCircle size={20} />
+              {feedback.error}
+            </div>
+          )}
+          {feedback.message && (
+            <div className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-3 animate-fade-in">
+              <CheckCircle size={20} />
+              {feedback.message}
+            </div>
+          )}
+
+          {/* STEP 1: Material Type */}
+          {currentStep === 1 && (
+            <div className="animate-fade-in flex-1 flex flex-col justify-center">
+              <h2 className="text-2xl font-bold text-white mb-8 text-center">What kind of material is this?</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto w-full">
+                <button
+                  onClick={() => setMaterialType("personal_material")}
+                  className={`p-8 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-4 text-center group hover:shadow-lg hover:shadow-cyan-500/10
+                                ${materialType === "personal_material" ? "bg-cyan-500/10 border-cyan-500" : "bg-gray-800/50 border-gray-700 hover:border-cyan-500/50"}
+                            `}
+                >
+                  <div className={`p-4 rounded-full ${materialType === "personal_material" ? "bg-cyan-500 text-white" : "bg-gray-700 text-gray-400 group-hover:text-cyan-400"} transition-colors`}>
+                    <Layers size={32} />
                   </div>
-                </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-cyan-400">Personal / School</h3>
+                    <p className="text-sm text-gray-400 mt-2">Notes for Class 10, 11, 12 or general study material.</p>
+                  </div>
+                </button>
 
+                <button
+                  onClick={() => setMaterialType("university_material")}
+                  className={`p-8 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-4 text-center group hover:shadow-lg hover:shadow-blue-500/10
+                                ${materialType === "university_material" ? "bg-blue-500/10 border-blue-500" : "bg-gray-800/50 border-gray-700 hover:border-blue-500/50"}
+                            `}
+                >
+                  <div className={`p-4 rounded-full ${materialType === "university_material" ? "bg-blue-500 text-white" : "bg-gray-700 text-gray-400 group-hover:text-blue-400"} transition-colors`}>
+                    <GraduationCap size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-blue-400">University</h3>
+                    <p className="text-sm text-gray-400 mt-2">Specific to colleges, degrees, and semesters.</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Details */}
+          {currentStep === 2 && (
+            <div className="animate-fade-in flex-1">
+              <h2 className="text-2xl font-bold text-white mb-6 text-center">Add Note Details</h2>
+              <div className="max-w-xl mx-auto">
                 {materialType === "personal_material" ? (
                   <PersonalNoteForm formData={formData} handleChange={handlePersonalChange} />
                 ) : (
                   <UniversityNoteForm uniState={uniState} handleUniChange={handleUniChange} />
                 )}
               </div>
-            </GlassCard>
-          </div>
-
-          {/* Right Column: Upload Area & File List */}
-          <div className="lg:col-span-2 space-y-6">
-
-            {/* Dropzone */}
-            <div
-              {...getRootProps()}
-              className={`relative group border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer text-center overflow-hidden ${isDragActive
-                  ? "border-cyan-400 bg-cyan-400/10"
-                  : "border-gray-700 hover:border-cyan-500/50 hover:bg-gray-800/50"
-                }`}
-            >
-              <input {...getInputProps()} />
-              <div className="relative z-10 flex flex-col items-center gap-4">
-                <div className={`p-4 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-400 group-hover:scale-110 transition-transform duration-300`}>
-                  <UploadCloud size={40} />
-                </div>
-                <div>
-                  <p className="text-xl font-medium text-white group-hover:text-cyan-400 transition-colors">
-                    {isDragActive ? "Drop files here" : "Drag & drop PDFs here"}
-                  </p>
-                  <p className="text-sm text-gray-400 mt-1">or click to browse</p>
-                </div>
-                <p className="text-xs text-gray-500">Max 10 files, 20MB each</p>
-              </div>
             </div>
+          )}
 
-            {/* Feedback Messages */}
-            {feedback.error && (
-              <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 animate-fade-in">
-                <AlertCircle size={20} />
-                {feedback.error}
+          {/* STEP 3: Upload */}
+          {currentStep === 3 && (
+            <div className="animate-fade-in flex-1">
+              <h2 className="text-2xl font-bold text-white mb-6 text-center">Upload Your Files</h2>
+
+              {/* Dropzone */}
+              <div
+                {...getRootProps()}
+                className={`relative border-2 border-dashed rounded-2xl p-10 transition-all duration-300 cursor-pointer text-center overflow-hidden mb-8 ${isDragActive
+                  ? "border-cyan-400 bg-cyan-400/10 scale-[1.02]"
+                  : "border-gray-700 hover:border-cyan-500/50 hover:bg-gray-800/50"
+                  }`}
+              >
+                <input {...getInputProps()} />
+                <div className="flex flex-col items-center gap-4">
+                  <div className="p-4 rounded-full bg-gray-800 text-cyan-400">
+                    <UploadCloud size={48} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-medium text-white">
+                      {isDragActive ? "Drop files now" : "Click or Drag PDFs here"}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-2">Max 10 files, 20MB each</p>
+                  </div>
+                </div>
               </div>
-            )}
-            {feedback.message && (
-              <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-3 animate-fade-in">
-                <CheckCircle size={20} />
-                {feedback.message}
-              </div>
-            )}
 
-            {/* Selected Files List */}
-            {files.length > 0 && (
-              <GlassCard className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
-                  <span>Selected Files ({files.length})</span>
-                  <button onClick={() => setFiles([])} className="text-xs text-red-400 hover:text-red-300">Clear All</button>
-                </h3>
-
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {/* File List */}
+              {files.length > 0 && (
+                <div className="space-y-3">
                   {files.map((file, index) => (
-                    <div key={index} className="flex items-start gap-4 p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 hover:border-gray-600 transition-colors group">
-                      {/* Thumbnail */}
-                      <div className="w-16 h-20 bg-gray-900 rounded-md overflow-hidden flex-shrink-0 border border-gray-700">
-                        {file.preview ? (
-                          <img src={file.preview} alt="Preview" className="w-full h-full object-cover opacity-80" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-600">
-                            <FileText size={24} />
-                          </div>
-                        )}
+                    <div key={index} className="flex items-center gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700">
+                      <div className="w-12 h-14 bg-gray-900 rounded border border-gray-700 flex items-center justify-center shrink-0 overflow-hidden">
+                        {file.preview ? <img src={file.preview} alt="" className="w-full h-full object-cover opacity-80" /> : <FileText className="text-gray-600" />}
                       </div>
-
-                      {/* File Details */}
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <Input
-                            value={file.title}
-                            onChange={(e) => handleFileChange(index, 'title', e.target.value)}
-                            placeholder="Note Title"
-                            className="h-8 text-sm bg-gray-900/50 border-gray-700 focus:border-cyan-500"
-                          />
-                          <button
-                            onClick={() => removeFile(index)}
-                            className="p-1 text-gray-500 hover:text-red-400 transition-colors"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500 truncate max-w-[150px]">{file.file.name}</span>
-                          <label className="flex items-center gap-2 cursor-pointer group/check">
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${file.isFree ? 'bg-cyan-500 border-cyan-500' : 'border-gray-600 bg-gray-900'}`}>
-                              {file.isFree && <CheckCircle size={12} className="text-white" />}
-                            </div>
+                      <div className="flex-1 min-w-0">
+                        <Input
+                          value={file.title}
+                          onChange={(e) => handleFileChange(index, 'title', e.target.value)}
+                          placeholder="Note Title"
+                          className="h-9 text-sm bg-transparent border-none focus:ring-0 px-0 text-white font-medium placeholder-gray-600"
+                        />
+                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                          <span>{Math.round(file.file.size / 1024)} KB</span>
+                          <label className="flex items-center gap-1.5 cursor-pointer hover:text-gray-300 transition-colors">
                             <input
                               type="checkbox"
                               checked={file.isFree}
                               onChange={(e) => handleFileChange(index, 'isFree', e.target.checked)}
-                              className="hidden"
+                              disabled={file.isPrivate}
+                              className="rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-offset-gray-900"
                             />
-                            <span className="text-xs text-gray-400 group-hover/check:text-gray-300">Free?</span>
+                            Free Access
+                          </label>
+                          <label className="flex items-center gap-1.5 cursor-pointer hover:text-gray-300 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={file.isPrivate}
+                              onChange={(e) => handleFileChange(index, 'isPrivate', e.target.checked)}
+                              className="rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-offset-gray-900"
+                            />
+                            Private
                           </label>
                         </div>
                       </div>
+                      <button onClick={() => removeFile(index)} className="p-2 text-gray-500 hover:text-red-400 transition-colors">
+                        <X size={20} />
+                      </button>
                     </div>
                   ))}
                 </div>
+              )}
 
-                <div className="mt-6 pt-4 border-t border-slate-700/50">
-                  <Button
-                    onClick={handleUpload}
-                    disabled={uploading || files.length === 0 || !isMetadataComplete()}
-                    isLoading={uploading}
-                    className="w-full"
-                  >
-                    {uploading ? 'Uploading...' : 'Upload All Notes'}
-                  </Button>
-                </div>
-              </GlassCard>
+            </div>
+          )}
+
+          {/* Navigation Footer */}
+          <div className="mt-8 pt-6 border-t border-gray-800 flex justify-between items-center">
+            {currentStep > 1 ? (
+              <button
+                onClick={handleBack}
+                className="px-6 py-2.5 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white transition-all flex items-center gap-2 font-medium"
+              >
+                <ArrowLeft size={18} /> Back
+              </button>
+            ) : <div></div>}
+
+            {currentStep < 3 ? (
+              <button
+                onClick={handleNext}
+                className="px-8 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2 font-medium"
+              >
+                Next Step <ArrowRight size={18} />
+              </button>
+            ) : (
+              <Button
+                onClick={handleUpload}
+                disabled={uploading || files.length === 0}
+                isLoading={uploading}
+                className="px-8"
+              >
+                {uploading ? 'Uploading...' : 'Confirm Upload'}
+              </Button>
             )}
           </div>
-        </div>
+
+          {/* Animated Progress Bar */}
+          {uploading && (
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-800">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300 ease-out"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+          )}
+
+        </GlassCard>
       </div>
     </div>
   );

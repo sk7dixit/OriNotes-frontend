@@ -1,44 +1,46 @@
 // src/pages/MyUploads.jsx
-import React, { useState, useRef } from 'react';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import { Trash2 } from 'lucide-react';
-import { universityData, courseData, subjectData } from '../services/universityData'; // Assuming these are defined
+import React, { useState, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
+import { X, FileText, UploadCloud, CheckCircle, AlertCircle, BookOpen, GraduationCap, Layers, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { pdfjs } from "react-pdf";
+import { universityData, courseData, subjectData } from '../services/universityData';
+import GlassCard from '../components/ui/GlassCard';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
 
-// --- Reusable Input Components (unchanged) ---
-const TextInput = ({ label, name, ...props }) => (
-    <div>
-        <label className="block text-gray-300 mb-2 font-semibold">{label}</label>
-        <input
-            name={name}
-            {...props}
-            className="w-full mt-2 px-4 py-2 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-        />
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+
+// --- Helper Components ---
+
+const StepIndicator = ({ currentStep, steps }) => (
+    <div className="flex items-center justify-center mb-12">
+        {steps.map((step, index) => {
+            const isCompleted = currentStep > index + 1;
+            const isCurrent = currentStep === index + 1;
+
+            return (
+                <div key={index} className="flex items-center">
+                    <div className={`
+                    flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all duration-300
+                    ${isCompleted ? 'bg-green-500 text-white' : isCurrent ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30' : 'bg-gray-800 text-gray-500 border border-gray-700'}
+                `}>
+                        {isCompleted ? <Check size={20} /> : index + 1}
+                    </div>
+                    <div className={`ml-3 mr-3 ${isCurrent ? 'text-white font-medium' : 'text-gray-500'} hidden md:block`}>
+                        {step}
+                    </div>
+                    {index < steps.length - 1 && (
+                        <div className={`w-12 h-1 mx-2 rounded-full ${currentStep > index + 1 ? 'bg-green-500/50' : 'bg-gray-800'}`} />
+                    )}
+                </div>
+            );
+        })}
     </div>
 );
 
-const SelectInput = ({ label, name, value, onChange, options, ...props }) => (
-    <div>
-        <label className="block text-gray-300 mb-2 font-semibold">{label}</label>
-        <select
-            name={name}
-            value={value}
-            onChange={onChange}
-            {...props}
-            className="w-full mt-2 px-4 py-2 rounded-lg bg-gray-700"
-        >
-            <option value="">-- Select {label} --</option>
-            {options.map((opt) => (
-                <option key={opt} value={opt}>
-                    {opt}
-                </option>
-            ))}
-        </select>
-    </div>
-);
-
-// --- Form Components (unchanged) ---
-// Personal Note Form - remains the same, fields now apply to all files in the batch
 const PersonalNoteForm = ({ formData, handleChange }) => {
     const legacyContent = {
         fields: ["Engineering", "Medical", "Arts", "Commerce", "Class 12", "Class 11", "Class 10"],
@@ -57,33 +59,37 @@ const PersonalNoteForm = ({ formData, handleChange }) => {
     const subjectOptions = formData.course ? legacyContent.subjects[formData.course] || [] : [];
 
     return (
-        <div className="space-y-6">
-             {/* NOTE: Title removed here as it is now defined per file */}
-            <SelectInput
+        <div className="space-y-4 animate-fade-in-up">
+            <Select
                 label="Field / Class"
                 name="field"
                 value={formData.field}
                 onChange={handleChange}
                 options={legacyContent.fields}
+                placeholder="Select Field"
                 required
             />
+
             {courseOptions.length > 0 && (
-                <SelectInput
+                <Select
                     label="Course / Degree"
                     name="course"
                     value={formData.course}
                     onChange={handleChange}
                     options={courseOptions}
+                    placeholder="Select Course"
                     required
                 />
             )}
+
             {subjectOptions.length > 0 && (
-                <SelectInput
+                <Select
                     label="Subject"
                     name="subject"
                     value={formData.subject}
                     onChange={handleChange}
                     options={subjectOptions}
+                    placeholder="Select Subject"
                     required
                 />
             )}
@@ -91,46 +97,63 @@ const PersonalNoteForm = ({ formData, handleChange }) => {
     );
 };
 
-// University Note Form - remains the same, fields now apply to all files in the batch
 const UniversityNoteForm = ({ uniState, handleUniChange }) => {
     const stateOptions = Object.keys(universityData);
     const institutionTypeOptions = uniState.state ? Object.keys(universityData[uniState.state]) : [];
-    const institutionOptions =
-        uniState.state && uniState.institutionType ? universityData[uniState.state][uniState.institutionType] : [];
+
+    // FIX: Map to .name to ensure we have an array of strings
+    const institutionOptions = uniState.state && uniState.institutionType && universityData[uniState.state] && universityData[uniState.state][uniState.institutionType]
+        ? universityData[uniState.state][uniState.institutionType].map(u => u.name)
+        : [];
+
     const courseOptions = Object.keys(courseData);
     const semesterOptions = uniState.course
-        ? Array.from({ length: courseData[uniState.course].semesters }, (_, i) => i + 1)
+        ? Array.from({ length: courseData[uniState.course]?.semesters || 0 }, (_, i) => i + 1)
         : [];
-    const subjectOptions =
-        uniState.course && uniState.semester && subjectData[uniState.course]
-            ? subjectData[uniState.course][uniState.semester] || []
-            : [];
+    const subjectOptions = uniState.course && uniState.semester && subjectData[uniState.course]
+        ? subjectData[uniState.course][uniState.semester] || []
+        : [];
 
     return (
-        <div className="space-y-6 p-4 border border-gray-600 rounded-lg">
-            <SelectInput label="State" name="state" value={uniState.state} onChange={handleUniChange} options={stateOptions} required />
-            {uniState.state && (
-                <SelectInput
-                    label="Institution Type"
-                    name="institutionType"
-                    value={uniState.institutionType}
+        <div className="space-y-4 animate-fade-in-up">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                    label="State"
+                    name="state"
+                    value={uniState.state}
                     onChange={handleUniChange}
-                    options={institutionTypeOptions}
+                    options={stateOptions}
+                    placeholder="Select State"
                     required
                 />
-            )}
+
+                {uniState.state && (
+                    <Select
+                        label="Institution Type"
+                        name="institutionType"
+                        value={uniState.institutionType}
+                        onChange={handleUniChange}
+                        options={institutionTypeOptions}
+                        placeholder="Select Type"
+                        required
+                    />
+                )}
+            </div>
+
             {uniState.institutionType && (
-                <SelectInput
+                <Select
                     label="Institution Name"
                     name="institution"
                     value={uniState.institution}
                     onChange={handleUniChange}
                     options={[...institutionOptions, "Other"]}
+                    placeholder="Select Institution"
                     required
                 />
             )}
+
             {uniState.institution === "Other" && (
-                <TextInput
+                <Input
                     label="Specify Institution"
                     name="otherInstitution"
                     value={uniState.otherInstitution}
@@ -140,29 +163,44 @@ const UniversityNoteForm = ({ uniState, handleUniChange }) => {
                 />
             )}
 
-            <SelectInput label="Course" name="course" value={uniState.course} onChange={handleUniChange} options={courseOptions} required />
-            {uniState.course && (
-                <SelectInput
-                    label="Semester"
-                    name="semester"
-                    value={uniState.semester}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                    label="Course"
+                    name="course"
+                    value={uniState.course}
                     onChange={handleUniChange}
-                    options={semesterOptions}
+                    options={courseOptions}
+                    placeholder="Select Course"
                     required
                 />
-            )}
+
+                {uniState.course && (
+                    <Select
+                        label="Semester"
+                        name="semester"
+                        value={uniState.semester}
+                        onChange={handleUniChange}
+                        options={semesterOptions}
+                        placeholder="Select Semester"
+                        required
+                    />
+                )}
+            </div>
+
             {uniState.semester && (
-                <SelectInput
+                <Select
                     label="Subject"
                     name="subject"
                     value={uniState.subject}
                     onChange={handleUniChange}
                     options={[...subjectOptions, "Other"]}
+                    placeholder="Select Subject"
                     required
                 />
             )}
+
             {uniState.subject === "Other" && (
-                <TextInput
+                <Input
                     label="Specify Subject"
                     name="otherSubject"
                     value={uniState.otherSubject}
@@ -174,31 +212,34 @@ const UniversityNoteForm = ({ uniState, handleUniChange }) => {
         </div>
     );
 };
-// --- END Form Components ---
 
+export default function MyUploads() {
+    const { user } = useAuth();
+    const [currentStep, setCurrentStep] = useState(1);
+    const [feedback, setFeedback] = useState({ message: '', error: '' });
+    const [files, setFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
+    const [materialType, setMaterialType] = useState(null); // Initially null to force selection
 
-function MyUploads() {
-    const { refreshUser } = useAuth();
-    const fileInputRef = useRef(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
-    const [uploadType, setUploadType] = useState("personal_material");
-    
-    // PHASE 2 FIX: State now holds an array of file objects { file: File, title: string, id: number }
-    const [fileList, setFileList] = useState([]); 
-    
-    const [message, setMessage] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
-
-    // Metadata state (applies to ALL files in the list)
-    const [formData, setFormData] = useState({ title: "", field: "", course: "", subject: "" });
+    const [formData, setFormData] = useState({ field: "", course: "", subject: "" });
     const [uniState, setUniState] = useState({
         state: "", institutionType: "", institution: "", otherInstitution: "",
         course: "", semester: "", subject: "", otherSubject: ""
     });
 
+    const steps = ["Material Type", "Note Details", "Upload Files"];
+
+    const playSuccessSound = () => {
+        // Placeholder for audio feedback
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'); // Example success chime
+        audio.volume = 0.5;
+        audio.play().catch(() => { });
+    };
 
     // --- Handlers ---
+
     const handlePersonalChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => {
@@ -217,196 +258,375 @@ function MyUploads() {
             if (name === "institutionType") { newState.institution = ""; newState.otherInstitution = ""; }
             if (name === "course") { newState.semester = ""; newState.subject = ""; newState.otherSubject = ""; }
             if (name === "semester") { newState.subject = ""; newState.otherSubject = ""; }
+            if (name === "institution" && value !== "Other") { newState.otherInstitution = ""; }
+            if (name === "subject" && value !== "Other") { newState.otherSubject = ""; }
             return newState;
         });
     };
-    
-    // PHASE 2 FIX: Handler for adding multiple files from input
-    const handleFileChange = (e) => {
-        const newFiles = Array.from(e.target.files)
-            .filter(f => f.type === 'application/pdf') // Basic validation
-            .map((file, index) => ({
-                id: Date.now() + index, // Unique ID for key/tracking
-                file: file,
-                title: file.name.replace(/\.[^/.]+$/, '') // Default title is filename
-            }));
-        
-        setFileList(prevList => [...prevList, ...newFiles]);
-        // Clear file input value to allow selecting the same file(s) again
-        if (fileInputRef.current) fileInputRef.current.value = '';
+
+    const generateThumbnail = async (file) => {
+        return new Promise((resolve, reject) => {
+            const fileReader = new FileReader();
+            fileReader.onload = async function () {
+                try {
+                    const typedArray = new Uint8Array(this.result);
+                    const pdf = await pdfjs.getDocument({ data: typedArray }).promise;
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 0.3 });
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    resolve(canvas.toDataURL());
+                } catch (e) {
+                    resolve(null);
+                }
+            };
+            fileReader.onerror = reject;
+            fileReader.readAsArrayBuffer(file);
+        });
     };
 
-    // PHASE 2 FIX: Handler for updating the title of a specific file
-    const handleTitleChange = (id, newTitle) => {
-        setFileList(prevList => prevList.map(item => 
-            item.id === id ? { ...item, title: newTitle } : item
-        ));
+    const onDrop = useCallback(
+        async (acceptedFiles) => {
+            if (files.length + acceptedFiles.length > 10) {
+                setFeedback(prev => ({ ...prev, error: "❌ Maximum 10 PDFs allowed per upload." }));
+                return;
+            }
+
+            const processedFiles = [];
+            setFeedback({ message: '', error: '' });
+
+            for (const file of acceptedFiles) {
+                if (file.type !== "application/pdf") {
+                    setFeedback(prev => ({ ...prev, error: `❌ ${file.name} is not a PDF` }));
+                    continue;
+                }
+                const preview = await generateThumbnail(file);
+                processedFiles.push({
+                    file,
+                    preview,
+                    title: file.name.replace('.pdf', '').replace(/[_-]/g, ' '),
+                    isFree: false,
+                    isPrivate: false
+                });
+            }
+
+            setFiles(prev => [...prev, ...processedFiles]);
+        },
+        [files]
+    );
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: { 'application/pdf': ['.pdf'] },
+        maxSize: 20 * 1024 * 1024, // 20MB
+    });
+
+    const removeFile = (index) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    // PHASE 2 FIX: Handler for removing a file from the list
-    const handleRemoveFile = (id) => {
-        setFileList(prevList => prevList.filter(item => item.id !== id));
+    const handleFileChange = (index, field, value) => {
+        setFiles(prev => prev.map((f, i) => i === index ? { ...f, [field]: value } : f));
     };
-    
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (fileList.length === 0) {
-            setError("Please select at least one PDF file to upload.");
+    const isMetadataComplete = () => {
+        if (materialType === 'personal_material') {
+            return formData.field && formData.course && formData.subject;
+        } else {
+            return uniState.state && uniState.institutionType && uniState.institution && uniState.course && uniState.semester && uniState.subject;
+        }
+    };
+
+    const handleNext = () => {
+        if (currentStep === 1 && !materialType) {
+            setFeedback({ error: 'Please select a material type.', message: '' });
             return;
         }
-        // Ensure all files have a non-empty title
-        if (fileList.some(item => item.title.trim() === '')) {
-             setError("All uploaded files must have a title.");
+        if (currentStep === 2 && !isMetadataComplete()) {
+            setFeedback({ error: 'Please fill in all details.', message: '' });
             return;
         }
+        setFeedback({ message: '', error: '' });
+        setCurrentStep(prev => prev + 1);
+    };
 
-        setLoading(true);
-        setMessage("");
-        setError("");
+    const handleBack = () => {
+        setFeedback({ message: '', error: '' });
+        setCurrentStep(prev => prev - 1);
+    };
+
+
+    const handleUpload = async () => {
+        if (files.length === 0) return;
+
+        setUploading(true);
+        setUploadProgress(0);
+        setFeedback({ message: '', error: '' });
+
+        // Simulate progress
+        const progressInterval = setInterval(() => {
+            setUploadProgress(prev => {
+                if (prev >= 90) return prev;
+                return prev + 10;
+            });
+        }, 400);
 
         const data = new FormData();
-        data.append("material_type", uploadType);
-        
-        // PHASE 2 FIX: Append ALL files and ALL titles
-        fileList.forEach(item => {
-            data.append("files[]", item.file); // Backend expects files[]
-            data.append("titles[]", item.title); // Backend expects titles[]
-        });
-        
-        // Append all metadata (applies to the whole batch)
-        if (uploadType === "university_material") {
-            data.append(
-                "university_name",
-                uniState.institution === "Other" ? uniState.otherInstitution : uniState.institution
-            );
-            data.append("course", uniState.course);
-            data.append(
-                "subject",
-                uniState.subject === "Other"
-                    ? uniState.otherSubject
-                    : uniState.subject + (uniState.semester ? ` (Sem ${uniState.semester})` : '')
-            );
-            data.append("semester", uniState.semester || '');
+
+        // Append Global Metadata
+        data.append('material_type', materialType);
+        if (materialType === 'personal_material') {
+            data.append('field', formData.field);
+            data.append('course', formData.course);
+            data.append('subject', formData.subject);
         } else {
-            // Personal Material fields
-            data.append("field", formData.field);
-            data.append("course", formData.course);
-            data.append("subject", formData.subject);
+            data.append('university_name', uniState.institution === 'Other' ? uniState.otherInstitution : uniState.institution);
+            data.append('course', uniState.course);
+            data.append('subject', uniState.subject === 'Other' ? uniState.otherSubject : uniState.subject);
         }
 
+        // Append Files and Per-File Metadata
+        files.forEach((f) => {
+            data.append('files', f.file);
+            data.append('titles', f.title);
+            data.append('is_free', f.isFree);
+            data.append('is_private', f.isPrivate);
+        });
+
         try {
-            // PHASE 2 FIX: Use the new multi-upload endpoint
-            const response = await api.post("/notes/multi-upload", data, { 
-                headers: { "Content-Type": "multipart/form-data" }
+            const res = await api.post("/notes/multi-upload", data, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-            
-            setMessage(response.data.message);
-            await refreshUser();
-            
-            // Clear form state
-            setFileList([]);
-            setFormData({ title: "", field: "", course: "", subject: "" });
-            setUniState({
-                state: "", institutionType: "", institution: "", otherInstitution: "",
-                course: "", semester: "", subject: "", otherSubject: ""
-            });
-            
+
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            playSuccessSound();
+
+            setFeedback({ message: `✅ ${res.data.message}`, error: '' });
+            setFiles([]);
+            // Maybe navigate to dashboard or reset
+            setTimeout(() => {
+                setCurrentStep(1);
+                setMaterialType(null);
+                setFeedback({ message: '', error: '' });
+                setUploadProgress(0);
+            }, 3000);
+
         } catch (err) {
-            // Handle specific multi-upload errors (like file limits or individual file errors)
-            const errorMsg = err.response?.data?.error || "Upload failed. Check console for details.";
-            setError(errorMsg);
+            clearInterval(progressInterval);
+            setUploadProgress(0);
+            console.error(err);
+            setFeedback({ error: err.response?.data?.error || "❌ Upload failed", message: '' });
         } finally {
-            setLoading(false);
+            setUploading(false);
         }
     };
 
     return (
-        <div className="max-w-3xl mx-auto p-8 bg-gray-800 rounded-xl">
-            <h1 className="text-4xl font-bold text-cyan-400 mb-4">Upload Your Note(s)</h1>
-            <p className="text-gray-400 mb-8">
-                You can upload multiple files at once. All files in the batch must share the same subject/course information below.
-            </p>
+        <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-[#0A0A0C] text-gray-100 font-inter">
+            <div className="max-w-4xl mx-auto">
 
-            {message && <p className="text-green-400 text-center mb-4">{message}</p>}
-            {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-                
-                {/* 1. UPLOAD TYPE SELECTION */}
-                <div>
-                    <label className="block text-gray-300 mb-2 font-semibold">Type of Material</label>
-                    <select
-                        value={uploadType}
-                        onChange={(e) => setUploadType(e.target.value)}
-                        className="w-full px-4 py-2 rounded-lg bg-gray-700"
-                    >
-                        <option value="personal_material">Personal Note (General/School)</option>
-                        <option value="university_material">University/College Material</option>
-                    </select>
+                {/* Header */}
+                <div className="text-center mb-12">
+                    <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight">
+                        Upload New Notes
+                    </h1>
+                    <p className="text-gray-400">Share your resources with the community in 3 simple steps.</p>
                 </div>
 
-                {/* 2. METADATA FORM (Applies to all files) */}
-                {uploadType === "personal_material" ? (
-                    <PersonalNoteForm formData={formData} handleChange={handlePersonalChange} />
-                ) : (
-                    <UniversityNoteForm uniState={uniState} handleUniChange={handleUniChange} />
-                )}
-                
-                {/* 3. FILE SELECTOR & LIST (PHASE 2 FIX: Multi-file UI) */}
-                <div className="pt-4 border-t border-gray-700">
-                    <label className="block text-gray-300 mb-2 font-semibold">Select PDF File(s)</label>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="application/pdf"
-                        multiple // Allows multiple selection
-                        onChange={handleFileChange}
-                        className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
-                    />
-                     <p className="text-xs text-gray-500 mt-2">PDF only, Max 10 files per batch, 20MB per file.</p>
-                </div>
+                {/* Wizard Progress */}
+                <StepIndicator currentStep={currentStep} steps={steps} />
 
-                {/* 4. DYNAMIC FILE LIST & TITLE INPUT */}
-                {fileList.length > 0 && (
-                    <div className="space-y-3 p-4 bg-gray-700 rounded-lg">
-                        <h3 className="text-lg font-bold text-white">Files to Upload ({fileList.length})</h3>
-                        {fileList.map(item => (
-                            <div key={item.id} className="flex items-center space-x-3">
-                                {/* Title Input */}
-                                <input
-                                    type="text"
-                                    value={item.title}
-                                    onChange={(e) => handleTitleChange(item.id, e.target.value)}
-                                    placeholder={item.file.name.replace(/\.[^/.]+$/, '')}
-                                    required
-                                    className="flex-1 px-3 py-2 rounded bg-gray-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-cyan-500"
-                                />
-                                {/* Remove Button */}
+                {/* Main Content Card */}
+                <GlassCard className="p-8 md:p-12 relative min-h-[500px] flex flex-col">
+
+                    {/* Feedback Messages */}
+                    {feedback.error && (
+                        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 animate-fade-in">
+                            <AlertCircle size={20} />
+                            {feedback.error}
+                        </div>
+                    )}
+                    {feedback.message && (
+                        <div className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-3 animate-fade-in">
+                            <CheckCircle size={20} />
+                            {feedback.message}
+                        </div>
+                    )}
+
+                    {/* STEP 1: Material Type */}
+                    {currentStep === 1 && (
+                        <div className="animate-fade-in flex-1 flex flex-col justify-center">
+                            <h2 className="text-2xl font-bold text-white mb-8 text-center">What kind of material is this?</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto w-full">
                                 <button
-                                    type="button"
-                                    onClick={() => handleRemoveFile(item.id)}
-                                    className="text-red-500 hover:text-red-400 p-2 rounded"
-                                    title={`Remove ${item.file.name}`}
+                                    onClick={() => setMaterialType("personal_material")}
+                                    className={`p-8 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-4 text-center group hover:shadow-lg hover:shadow-cyan-500/10
+                                ${materialType === "personal_material" ? "bg-cyan-500/10 border-cyan-500" : "bg-gray-800/50 border-gray-700 hover:border-cyan-500/50"}
+                            `}
                                 >
-                                    <Trash2 className="w-5 h-5" />
+                                    <div className={`p-4 rounded-full ${materialType === "personal_material" ? "bg-cyan-500 text-white" : "bg-gray-700 text-gray-400 group-hover:text-cyan-400"} transition-colors`}>
+                                        <Layers size={32} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white group-hover:text-cyan-400">Personal / School</h3>
+                                        <p className="text-sm text-gray-400 mt-2">Notes for Class 10, 11, 12 or general study material.</p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setMaterialType("university_material")}
+                                    className={`p-8 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-4 text-center group hover:shadow-lg hover:shadow-blue-500/10
+                                ${materialType === "university_material" ? "bg-blue-500/10 border-blue-500" : "bg-gray-800/50 border-gray-700 hover:border-blue-500/50"}
+                            `}
+                                >
+                                    <div className={`p-4 rounded-full ${materialType === "university_material" ? "bg-blue-500 text-white" : "bg-gray-700 text-gray-400 group-hover:text-blue-400"} transition-colors`}>
+                                        <GraduationCap size={32} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white group-hover:text-blue-400">University</h3>
+                                        <p className="text-sm text-gray-400 mt-2">Specific to colleges, degrees, and semesters.</p>
+                                    </div>
                                 </button>
                             </div>
-                        ))}
+                        </div>
+                    )}
+
+                    {/* STEP 2: Details */}
+                    {currentStep === 2 && (
+                        <div className="animate-fade-in flex-1">
+                            <h2 className="text-2xl font-bold text-white mb-6 text-center">Add Note Details</h2>
+                            <div className="max-w-xl mx-auto">
+                                {materialType === "personal_material" ? (
+                                    <PersonalNoteForm formData={formData} handleChange={handlePersonalChange} />
+                                ) : (
+                                    <UniversityNoteForm uniState={uniState} handleUniChange={handleUniChange} />
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: Upload */}
+                    {currentStep === 3 && (
+                        <div className="animate-fade-in flex-1">
+                            <h2 className="text-2xl font-bold text-white mb-6 text-center">Upload Your Files</h2>
+
+                            {/* Dropzone */}
+                            <div
+                                {...getRootProps()}
+                                className={`relative border-2 border-dashed rounded-2xl p-10 transition-all duration-300 cursor-pointer text-center overflow-hidden mb-8 ${isDragActive
+                                    ? "border-cyan-400 bg-cyan-400/10 scale-[1.02]"
+                                    : "border-gray-700 hover:border-cyan-500/50 hover:bg-gray-800/50"
+                                    }`}
+                            >
+                                <input {...getInputProps()} />
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="p-4 rounded-full bg-gray-800 text-cyan-400">
+                                        <UploadCloud size={48} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xl font-medium text-white">
+                                            {isDragActive ? "Drop files now" : "Click or Drag PDFs here"}
+                                        </p>
+                                        <p className="text-sm text-gray-400 mt-2">Max 10 files, 20MB each</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* File List */}
+                            {files.length > 0 && (
+                                <div className="space-y-3">
+                                    {files.map((file, index) => (
+                                        <div key={index} className="flex items-center gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700">
+                                            <div className="w-12 h-14 bg-gray-900 rounded border border-gray-700 flex items-center justify-center shrink-0 overflow-hidden">
+                                                {file.preview ? <img src={file.preview} alt="" className="w-full h-full object-cover opacity-80" /> : <FileText className="text-gray-600" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <Input
+                                                    value={file.title}
+                                                    onChange={(e) => handleFileChange(index, 'title', e.target.value)}
+                                                    placeholder="Note Title"
+                                                    className="h-9 text-sm bg-transparent border-none focus:ring-0 px-0 text-white font-medium placeholder-gray-600"
+                                                />
+                                                <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                                                    <span>{Math.round(file.file.size / 1024)} KB</span>
+                                                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-gray-300 transition-colors">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={file.isFree}
+                                                            onChange={(e) => handleFileChange(index, 'isFree', e.target.checked)}
+                                                            disabled={file.isPrivate}
+                                                            className="rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-offset-gray-900"
+                                                        />
+                                                        Free Access
+                                                    </label>
+                                                    <label className="flex items-center gap-1.5 cursor-pointer hover:text-gray-300 transition-colors">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={file.isPrivate}
+                                                            onChange={(e) => handleFileChange(index, 'isPrivate', e.target.checked)}
+                                                            className="rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-offset-gray-900"
+                                                        />
+                                                        Private
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => removeFile(index)} className="p-2 text-gray-500 hover:text-red-400 transition-colors">
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                        </div>
+                    )}
+
+                    {/* Navigation Footer */}
+                    <div className="mt-8 pt-6 border-t border-gray-800 flex justify-between items-center">
+                        {currentStep > 1 ? (
+                            <button
+                                onClick={handleBack}
+                                className="px-6 py-2.5 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white transition-all flex items-center gap-2 font-medium"
+                            >
+                                <ArrowLeft size={18} /> Back
+                            </button>
+                        ) : <div></div>}
+
+                        {currentStep < 3 ? (
+                            <button
+                                onClick={handleNext}
+                                className="px-8 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2 font-medium"
+                            >
+                                Next Step <ArrowRight size={18} />
+                            </button>
+                        ) : (
+                            <Button
+                                onClick={handleUpload}
+                                disabled={uploading || files.length === 0}
+                                isLoading={uploading}
+                                className="px-8"
+                            >
+                                {uploading ? 'Uploading...' : 'Confirm Upload'}
+                            </Button>
+                        )}
                     </div>
-                )}
-                
-                {/* 5. SUBMIT BUTTON */}
-                <button
-                    type="submit"
-                    disabled={loading || fileList.length === 0}
-                    className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 mt-4"
-                >
-                    {loading ? "Uploading Batch..." : `Upload ${fileList.length} Note(s)`}
-                </button>
-            </form>
+
+                    {/* Animated Progress Bar */}
+                    {uploading && (
+                        <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-800">
+                            <div
+                                className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300 ease-out"
+                                style={{ width: `${uploadProgress}%` }}
+                            ></div>
+                        </div>
+                    )}
+
+                </GlassCard>
+            </div>
         </div>
     );
 }
-
-export default MyUploads;

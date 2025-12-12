@@ -1,10 +1,10 @@
-// src/components/PrivateRoute.jsx
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from '../context/AuthContext';
 
 function PrivateRoute({ children, requiredRole }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -15,7 +15,8 @@ function PrivateRoute({ children, requiredRole }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // Redirect to login but save the current location
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (requiredRole && user.role !== requiredRole) {

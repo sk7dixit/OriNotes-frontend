@@ -1,299 +1,293 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Key, ArrowRight, ShieldCheck, Smartphone, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Mail, Lock, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff, Loader, Smartphone, Shield, Key } from 'lucide-react';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import api, { setAccessToken } from '../services/api';
-import GlassCard from '../components/ui/GlassCard';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
+import FloatingLabelInput from '../components/ui/FloatingLabelInput';
 import Logo from '../components/ui/Logo';
 
-function Login() {
-  const [identifier, setIdentifier] = useState('');
+const Login = () => {
+  // Tab State: 'password' | 'otp'
+  const [loginMethod, setLoginMethod] = useState('password');
+
+  // Form States
+  const [identifier, setIdentifier] = useState(''); // email/username
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // OTP States
   const [otp, setOtp] = useState('');
-  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+
+  // UI States
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [loginMethod, setLoginMethod] = useState('password'); // 'password' | 'otp'
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { login: authLogin } = useAuth();
+  const location = useLocation();
+  const { login } = useAuth();
 
-  const handleSuccessfulLogin = (response) => {
-    const token = response?.data?.token || response?.data?.accessToken || null;
-    const user = response?.data?.user || response?.data?.profile || null;
+  // Capture redirect path if present
+  const from = location.state?.from?.pathname;
 
-    if (token) {
-      try {
-        authLogin(token, user);
-      } catch (e) {
-        try { setAccessToken(token); } catch (_) { }
-      }
-      setMessage('Login successful — redirecting...');
-      setError('');
-      setLoading(false);
-      const target = (user && user.role === 'admin') ? '/admin-dashboard' : '/dashboard';
-      setTimeout(() => navigate(target, { replace: true }), 900);
-      return;
+  // --- Actions ---
+
+  const handleSuccessRedirect = (user) => {
+    if (from) {
+      navigate(from);
+    } else if (user.role === 'admin') {
+      navigate('/admin-dashboard');
+    } else {
+      navigate('/dashboard');
     }
-
-    setMessage(response?.data?.message || 'Logged in (no token provided).');
-    setLoading(false);
   };
 
-  const switchMethod = (method) => {
-    setLoginMethod(method);
+  const handlePasswordLogin = async (e) => {
+    e.preventDefault();
     setError('');
-    setMessage('');
-    setIsOtpSent(false);
-    setOtp('');
-    setPassword('');
-    setTwoFactorRequired(false);
-    setTwoFactorCode('');
-  };
+    setLoading(true);
 
-  const handleResendVerification = async () => {
-    if (!identifier) return setError('Enter your email or username to resend verification.');
-    setResendLoading(true);
-    setError('');
-    setMessage('');
     try {
-      const resp = await api.post('/users/resend-verification', { identifier });
-      setMessage(resp?.data?.message || 'Verification link resent. Check your inbox.');
+      const res = await api.post('/users/login', { identifier, password });
+      const { token, user } = res.data;
+
+      login(token, user); // saves to context & localStorage
+      handleSuccessRedirect(user);
+
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to resend verification link.');
+      console.error(err);
+      setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
     } finally {
-      setResendLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
     setLoading(true);
 
     try {
-      if (loginMethod === 'password') {
-        const payload = {
-          identifier: identifier.trim(),
-          password,
-          twoFactorCode: twoFactorRequired ? twoFactorCode.trim() : undefined,
-          rememberMe,
-        };
-
-        const response = await api.post('/users/login', payload);
-        if (response.data && response.data.twoFactorRequired) {
-          setTwoFactorRequired(true);
-          setError(response.data.error || 'Two-factor authentication required. Enter code.');
-          setLoading(false);
-          return;
-        }
-
-        handleSuccessfulLogin(response);
-
-      } else {
-        if (!isOtpSent) {
-          const resp = await api.post('/users/login-otp-request', { identifier: identifier.trim() });
-          setMessage(resp.data?.message || 'OTP sent. Please check your device.');
-          setIsOtpSent(true);
-          setLoading(false);
-        } else {
-          const resp = await api.post('/users/login-otp-verify', { identifier: identifier.trim(), otp: otp.trim(), rememberMe });
-          handleSuccessfulLogin(resp);
-        }
-      }
+      await api.post('/users/request-login-otp', { identifier });
+      setOtpSent(true);
+      setMessage(`Code sent to ${identifier}`);
     } catch (err) {
-      const srv = err.response?.data;
-      if (srv?.twoFactorRequired) {
-        setTwoFactorRequired(true);
-        setError(srv.error || 'Two-factor required. Enter code.');
-      } else if (/verify/i.test(srv?.error || '')) {
-        setError(srv?.error || 'Email not verified.');
-      } else {
-        setError(srv?.error || 'Login failed. Check credentials and try again.');
-      }
+      console.error(err);
+      setError(err.response?.data?.error || 'Failed to send OTP. User may not exist.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await api.post('/users/verify-login-otp', { identifier, otp });
+      const { token, user } = res.data;
+      login(token, user);
+      handleSuccessRedirect(user);
+
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Invalid Code. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-cyan-500/20 rounded-full blur-[120px]"></div>
+    <div className="min-h-screen bg-[#0f172a] flex selection:bg-indigo-500/30 font-sans text-slate-200">
+
+      {/* LEFT SECTION: Visuals */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden bg-gradient-to-tr from-slate-900 via-[#0f172a] to-indigo-950/20">
+        <div className="absolute top-10 left-10 z-20">
+          <Logo size="2xl" />
+        </div>
+        <div className="absolute top-[-20%] left-[-20%] w-[700px] h-[700px] rounded-full bg-indigo-600/10 blur-[130px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-teal-500/10 blur-[120px]"></div>
+
+        <div className="relative z-10 m-auto max-w-lg p-12">
+          <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
+            Capture ideas, <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-400">
+              Share knowledge.
+            </span>
+          </h1>
+          <p className="text-lg text-slate-400 leading-relaxed max-w-md">
+            The modern platform for students and professionals to organize notes, collaborate on research, and share insights instantly.
+          </p>
+
+          <div className="mt-12 flex items-center gap-4">
+            <div className="flex -space-x-3">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="w-10 h-10 rounded-full border-2 border-[#0f172a] bg-slate-700 flex items-center justify-center text-xs font-medium text-white shadow-lg">
+                  User
+                </div>
+              ))}
+            </div>
+            <div className="text-sm font-medium text-slate-400">
+              <span className="text-white">10k+</span> students joined
+            </div>
+          </div>
+        </div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
       </div>
 
-      <GlassCard className="w-full max-w-md animate-fade-in-up">
-        <div className="flex flex-col items-center mb-8">
-          <Logo size="lg" className="mb-2" />
-          <p className="text-slate-400 text-center">Welcome back, please login to continue</p>
-        </div>
+      {/* RIGHT SECTION: Form */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 relative">
+        <div className="lg:hidden absolute top-[-10%] right-[-10%] w-[300px] h-[300px] bg-indigo-500/20 rounded-full blur-[100px]"></div>
 
-        {/* Method Switcher */}
-        <div className="flex p-1 bg-slate-800/50 rounded-xl mb-6 border border-slate-700/50">
-          <button
-            onClick={() => switchMethod('password')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${loginMethod === 'password'
-                ? 'bg-cyan-500/20 text-cyan-400 shadow-sm border border-cyan-500/20'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
-              }`}
-          >
-            <Key size={16} /> Password
-          </button>
-          <button
-            onClick={() => switchMethod('otp')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${loginMethod === 'otp'
-                ? 'bg-cyan-500/20 text-cyan-400 shadow-sm border border-cyan-500/20'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
-              }`}
-          >
-            <Smartphone size={16} /> OTP Login
-          </button>
-        </div>
-
-        {message && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-start gap-2 animate-fade-in-up">
-            <CheckCircle size={18} className="mt-0.5 shrink-0" />
-            <span>{message}</span>
+        <div className="w-full max-w-[420px] animate-fade-in-up">
+          <div className="mb-10 text-center lg:text-left">
+            <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
+            <p className="text-slate-500">Please enter your details to sign in.</p>
           </div>
-        )}
 
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex flex-col gap-2 animate-fade-in-up">
-            <div className="flex items-start gap-2">
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-            {error.includes('verified') && (
-              <button
-                onClick={handleResendVerification}
-                disabled={resendLoading}
-                className="text-xs font-semibold text-red-300 hover:text-red-200 underline self-start ml-6"
-              >
-                {resendLoading ? 'Resending...' : 'Resend verification email'}
-              </button>
-            )}
+          <div className="bg-slate-900/50 p-1 rounded-2xl flex items-center mb-8 border border-white/5 shadow-inner">
+            <button
+              onClick={() => setLoginMethod('password')}
+              className={`flex-1 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${loginMethod === 'password' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Key size={16} /> Password
+            </button>
+            <button
+              onClick={() => setLoginMethod('otp')}
+              className={`flex-1 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${loginMethod === 'otp' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Shield size={16} /> One-Time Code
+            </button>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <Input
-            icon={Mail}
-            placeholder="Email or Username"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            required
-            disabled={isOtpSent || twoFactorRequired || loading}
-          />
+          {loginMethod === 'password' && (
+            <form onSubmit={handlePasswordLogin} className="space-y-2">
+              <FloatingLabelInput
+                label="Email or Username"
+                name="identifier"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                icon={Mail}
+                required
+              />
 
-          {loginMethod === 'password' && !twoFactorRequired && (
-            <>
-              <div className="space-y-1">
-                <Input
-                  icon={Lock}
-                  type="password"
-                  placeholder="Password"
+              <div className="relative">
+                <FloatingLabelInput
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  icon={Lock}
                   required
-                  disabled={loading}
+                  rightElement={
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-500 hover:text-white transition-colors">
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  }
                 />
-                <div className="flex justify-end">
-                  <Link to="/forgot-password" className="text-xs text-cyan-400 hover:text-cyan-300 hover:underline">
-                    Forgot Password?
-                  </Link>
+                <div className="absolute right-0 -bottom-6">
+                  <Link to="/forgot-password" className="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors">Forgot Password?</Link>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-800"
-                  disabled={loading}
-                />
-                <label htmlFor="rememberMe" className="text-sm text-slate-300 cursor-pointer select-none">
-                  Remember me for 10 days
-                </label>
-              </div>
-            </>
+              <div className="h-4"></div>
+
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2 animate-shake">
+                  <AlertCircle size={16} /> {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-14 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
+              >
+                {loading ? <Loader className="animate-spin" size={20} /> : <>Sign In <ArrowRight size={20} /></>}
+              </button>
+            </form>
           )}
 
-          {twoFactorRequired && (
-            <div className="animate-fade-in-up">
-              <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl mb-4">
-                <p className="text-sm text-cyan-200 flex items-center gap-2">
-                  <ShieldCheck size={18} />
-                  Two-Factor Authentication Required
-                </p>
-                <p className="text-xs text-slate-400 mt-1 ml-6">
-                  Enter the code from your authenticator app.
-                </p>
-              </div>
-              <Input
-                icon={ShieldCheck}
-                placeholder="Enter 6-digit 2FA Code"
-                value={twoFactorCode}
-                onChange={(e) => setTwoFactorCode(e.target.value)}
-                required
-                disabled={loading}
-                autoFocus
-                className="text-center tracking-widest font-mono text-lg"
-              />
+          {loginMethod === 'otp' && (
+            <div className="space-y-4">
+              {!otpSent ? (
+                <form onSubmit={handleSendOtp}>
+                  <FloatingLabelInput
+                    label="Email Address"
+                    name="identifier"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    icon={Mail}
+                    required
+                  />
+
+                  {error && (
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2 animate-shake">
+                      <AlertCircle size={16} /> {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-14 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border border-white/5 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    {loading ? <Loader className="animate-spin" size={20} /> : <>Send Code <Smartphone size={20} /></>}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fade-in-right">
+                  <div className="text-center mb-6">
+                    <p className="text-slate-400 text-sm">We sent a 6-digit code to <span className="text-white font-medium">{identifier}</span></p>
+                    <button type="button" onClick={() => setOtpSent(false)} className="text-xs text-indigo-400 hover:text-indigo-300 mt-2">Change email</button>
+                  </div>
+
+                  <FloatingLabelInput
+                    label="6-Digit Code"
+                    name="otp"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    icon={Shield}
+                    required
+                  />
+
+                  {error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2 animate-shake">
+                      <AlertCircle size={16} /> {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-14 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-teal-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    {loading ? <Loader className="animate-spin" size={20} /> : <>Verify & Login <CheckCircle size={20} /></>}
+                  </button>
+                </form>
+              )}
             </div>
           )}
 
-          {loginMethod === 'otp' && isOtpSent && (
-            <div className="animate-fade-in-up">
-              <Input
-                icon={Key}
-                placeholder="Enter OTP Code"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                disabled={loading}
-                autoFocus
-                className="text-center tracking-widest font-mono text-lg"
-              />
-            </div>
-          )}
-
-          <Button type="submit" isLoading={loading} className="w-full mt-2">
-            {loading ? (
-              'Processing...'
-            ) : (
-              <>
-                {loginMethod === 'password'
-                  ? (twoFactorRequired ? 'Verify & Login' : 'Sign In')
-                  : (isOtpSent ? 'Verify OTP' : 'Send OTP')
-                }
-                {!loading && <ArrowRight size={18} />}
-              </>
-            )}
-          </Button>
-        </form>
-
-        <div className="mt-8 text-center">
-          <p className="text-slate-400 text-sm">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-cyan-400 hover:text-cyan-300 font-medium hover:underline transition-all">
-              Create Account
-            </Link>
-          </p>
+          <div className="mt-10 text-center">
+            <p className="text-slate-500 text-sm">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline">
+                Create account
+              </Link>
+            </p>
+          </div>
+          <div className="absolute top-[-40px] left-0 right-0 flex justify-center lg:hidden">
+            <Logo size="lg" />
+          </div>
         </div>
-      </GlassCard>
+      </div>
     </div>
   );
-}
+};
 
 export default Login;

@@ -10,10 +10,10 @@ const Button = ({
     const baseStyles = "px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed";
 
     const variants = {
-        primary: "glass-button hover:shadow-lg hover:-translate-y-0.5",
-        secondary: "bg-slate-700 hover:bg-slate-600 text-white border border-slate-600",
-        outline: "bg-transparent border border-slate-500 text-slate-300 hover:border-cyan-400 hover:text-cyan-400",
-        danger: "bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30",
+        primary: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 hover:-translate-y-0.5",
+        secondary: "bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-500/20",
+        outline: "bg-transparent border border-slate-600 text-slate-300 hover:border-indigo-400 hover:text-indigo-400",
+        danger: "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20",
         ghost: "bg-transparent hover:bg-white/5 text-slate-300 hover:text-white"
     };
 

@@ -2,15 +2,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import { Bell, Upload, Star, Key, Info, CheckCheck, Trash2, MessageSquare, Filter } from 'lucide-react';
 
 // Helper function for formatting dates
 const formatDate = (dateString) => new Date(dateString).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
 // --- VIEW FOR REGULAR USERS ---
 function UserNotificationsView() {
-    const { fetchUnreadCount } = useAuth(); // Get the function to refresh the global count
+    const { fetchUnreadCount } = useAuth();
     const [notifications, setNotifications] = useState([]);
+    const [filteredNotifications, setFilteredNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('all'); // all, system, engagement, requests
 
     const fetchNotifications = useCallback(async () => {
         setLoading(true);
@@ -28,39 +32,152 @@ function UserNotificationsView() {
         fetchNotifications();
     }, [fetchNotifications]);
 
+    // Apply Filters
+    useEffect(() => {
+        if (filter === 'all') {
+            setFilteredNotifications(notifications);
+        } else {
+            setFilteredNotifications(notifications.filter(n => {
+                if (filter === 'requests') return n.type === 'access_request';
+                if (filter === 'engagement') return ['rating', 'comment'].includes(n.type);
+                if (filter === 'system') return ['welcome', 'system', 'upload'].includes(n.type);
+                return true;
+            }));
+        }
+    }, [filter, notifications]);
+
     const handleMarkAllRead = async () => {
         try {
             await api.post('/notifications/mark-read');
-            fetchNotifications(); // Re-fetch to show the updated "read" status
-            fetchUnreadCount(); // Trigger a refresh of the global unread count for the sidebar
+            // Optimistically update local state
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            fetchUnreadCount();
         } catch (error) {
             console.error("Failed to mark notifications as read:", error);
         }
     };
 
-    if (loading) return <p className="text-gray-400">Loading notifications...</p>;
+    const handleClearAll = async () => {
+        // Placeholder for Clear/Delete All functionality
+        // Assuming API might not exist, we just clear local for now or show alert
+        if (window.confirm("Are you sure you want to clear all notifications?")) {
+            setNotifications([]);
+            // await api.delete('/notifications'); // Future implementation
+        }
+    };
+
+    const getNotificationStyle = (type) => {
+        switch (type) {
+            case 'upload': return { icon: Upload, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' };
+            case 'rating': return { icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' };
+            case 'access_request': return { icon: Key, color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/30' };
+            case 'comment': return { icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/30' };
+            default: return { icon: Bell, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' };
+        }
+    };
+
+    if (loading) return (
+        <div className="min-h-screen bg-[#0A0A0C] flex items-center justify-center">
+            <div className="animate-pulse text-cyan-500 font-medium">Loading notifications...</div>
+        </div>
+    );
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-4xl font-bold text-cyan-400">Notifications</h1>
-                <button
-                    onClick={handleMarkAllRead}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                    Mark All as Read
-                </button>
+        <div className="max-w-4xl mx-auto min-h-screen pt-4 pb-12 px-6">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Notifications</h1>
+                    <p className="text-slate-400">Stay updated with your latest activities</p>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleMarkAllRead}
+                        className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-xl transition-all border border-slate-700 shadow-sm"
+                        title="Mark all as read"
+                    >
+                        <CheckCheck size={18} />
+                        <span className="hidden sm:inline">Mark Read</span>
+                    </button>
+                    <button
+                        onClick={handleClearAll}
+                        className="flex items-center gap-2 bg-slate-800 hover:bg-red-500/20 text-slate-200 hover:text-red-400 px-4 py-2 rounded-xl transition-all border border-slate-700 hover:border-red-500/30 shadow-sm"
+                        title="Clear all notifications"
+                    >
+                        <Trash2 size={18} />
+                        <span className="hidden sm:inline">Clear</span>
+                    </button>
+                </div>
             </div>
 
-            <div className="space-y-4">
-                {notifications.length > 0 ? notifications.map(n => (
-                    <div key={n.id} className={`p-4 rounded-lg border-l-4 ${n.is_read ? 'bg-gray-800 border-gray-600' : 'bg-blue-900/50 border-cyan-500'}`}>
-                        <p className="font-bold text-lg">{n.title}</p>
-                        <p className="text-gray-300 mt-1">{n.message}</p>
-                        <p className="text-xs text-gray-500 mt-2">{formatDate(n.created_at)}</p>
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
+                {[
+                    { id: 'all', label: 'All' },
+                    { id: 'requests', label: 'Requests' },
+                    { id: 'engagement', label: 'Engagement' },
+                    { id: 'system', label: 'System' }
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setFilter(tab.id)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filter === tab.id
+                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white border border-transparent'
+                            }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="space-y-3">
+                {filteredNotifications.length > 0 ? filteredNotifications.map((n, index) => {
+                    const style = getNotificationStyle(n.type);
+                    const Icon = style.icon;
+
+                    return (
+                        <div
+                            key={n.id}
+                            className={`relative group flex gap-4 p-4 rounded-xl border transition-all duration-300 animate-slide-up ${style.bg} ${n.is_read ? 'opacity-70 hover:opacity-100' : 'shadow-lg shadow-black/20'}`}
+                            style={{ animationDelay: `${index * 50}ms` }}
+                        >
+                            <div className={`mt-1 p-2 rounded-lg bg-slate-900/50 ${style.color} shrink-0 h-fit`}>
+                                <Icon size={20} />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <h3 className={`font-semibold text-lg leading-snug ${n.is_read ? 'text-slate-300' : 'text-white'}`}>
+                                    {n.title}
+                                </h3>
+                                <p className="text-slate-400 mt-1 leading-relaxed text-sm truncate md:whitespace-normal md:overflow-visible">{n.message}</p>
+                                <div className="flex flex-wrap items-center gap-4 mt-3">
+                                    <span className="text-xs text-slate-500 font-medium">
+                                        {formatDate(n.created_at)}
+                                    </span>
+                                    {n.reference_url && (
+                                        <Link
+                                            to={n.reference_url}
+                                            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            View Details →
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
+
+                            {!n.is_read && (
+                                <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
+                            )}
+                        </div>
+                    );
+                }) : (
+                    <div className="text-center py-20 bg-slate-800/30 rounded-2xl border border-dashed border-slate-700/50 flex flex-col items-center">
+                        <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                            <Bell size={24} className="text-slate-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-slate-300">No notifications found</h3>
+                        <p className="text-slate-500 mt-2">Try adjusting your filters or check back later.</p>
                     </div>
-                )) : (
-                    <p className="text-gray-500">You have no notifications.</p>
                 )}
             </div>
         </div>
@@ -96,39 +213,41 @@ function AdminNotificationsView() {
     };
 
     return (
-        <div>
+        <div className="max-w-4xl mx-auto p-6 text-gray-100">
             <h1 className="text-4xl font-bold text-cyan-400 mb-6">Broadcast a Notification</h1>
             <p className="text-gray-400 mb-8">This message will be sent to every registered user on the platform.</p>
 
-            <form onSubmit={handleSendNotification} className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <div className="mb-4">
+            <form onSubmit={handleSendNotification} className="bg-gray-800/50 border border-gray-700 p-8 rounded-2xl shadow-xl">
+                <div className="mb-6">
                     <label htmlFor="title" className="block text-gray-300 mb-2 font-semibold">Title</label>
                     <input
                         type="text"
                         id="title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full p-3 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        className="w-full p-3 rounded-xl bg-gray-900/50 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
+                        placeholder="Enter notification title..."
                     />
                 </div>
-                <div className="mb-6">
+                <div className="mb-8">
                     <label htmlFor="message" className="block text-gray-300 mb-2 font-semibold">Message</label>
                     <textarea
                         id="message"
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         rows="6"
-                        className="w-full p-3 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        className="w-full p-3 rounded-xl bg-gray-900/50 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all resize-none"
+                        placeholder="Type your message here..."
                     />
                 </div>
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-purple-500/20"
                 >
                     {loading ? 'Broadcasting...' : 'Send to All Users'}
                 </button>
-                 {feedback && <p className={`mt-4 text-center font-semibold ${feedback.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>{feedback}</p>}
+                {feedback && <p className={`mt-6 text-center font-medium p-3 rounded-lg ${feedback.startsWith('✅') ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>{feedback}</p>}
             </form>
         </div>
     );
@@ -136,11 +255,11 @@ function AdminNotificationsView() {
 
 // --- MAIN COMPONENT THAT DECIDES WHICH VIEW TO SHOW ---
 function Notifications() {
-  const { user } = useAuth();
+    const { user } = useAuth(); // Assuming useAuth provides 'user' object
 
-  if (!user) return null;
+    if (!user) return null;
 
-  return user.role === 'admin' ? <AdminNotificationsView /> : <UserNotificationsView />;
+    return user.role === 'admin' ? <AdminNotificationsView /> : <UserNotificationsView />;
 }
 
 export default Notifications;

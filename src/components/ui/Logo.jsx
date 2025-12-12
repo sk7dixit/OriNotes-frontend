@@ -1,15 +1,24 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const Logo = ({ className = '', size = 'md' }) => {
+const Logo = ({ className = '', size = 'md', onClick }) => {
     const sizes = {
         sm: 'text-xl',
         md: 'text-2xl',
-        lg: 'text-4xl'
+        lg: 'text-4xl',
+        xl: 'text-5xl',
+        '2xl': 'text-6xl'
+    };
+
+    const handleClick = (e) => {
+        if (onClick) {
+            e.preventDefault();
+            onClick(e);
+        }
     };
 
     return (
-        <Link to="/" className={`font-bold tracking-tight flex items-center gap-2 ${sizes[size]} ${className}`}>
+        <Link to="/" onClick={handleClick} className={`font-bold tracking-tight flex items-center gap-2 ${sizes[size]} ${className}`}>
             <div className="relative flex items-center justify-center">
                 <div className="absolute inset-0 bg-cyan-500 blur-lg opacity-20 rounded-full"></div>
                 <svg

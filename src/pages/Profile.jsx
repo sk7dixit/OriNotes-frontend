@@ -1,344 +1,280 @@
-// src/pages/Profile.jsx
-import React, { useState, useEffect } from "react";
-import api from "../services/api";
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import { User, Mail, Calendar, Upload, BookOpen, Download, Trophy, Edit3, Share2, MapPin, Briefcase, GraduationCap, Github, Linkedin, Globe, Flame, Zap, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { allBadges } from '../services/badgeService';
-import { User, Mail, Phone, School, Edit2, Save, X, Shield, QrCode, CheckCircle, AlertCircle, Award, LogOut } from 'lucide-react';
-import GlassCard from '../components/ui/GlassCard';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 
-// --- NEW 2FA Component ---
-const TwoFactorAuthManager = ({ user, updateUserProfile }) => {
-    const [qrCodeUrl, setQrCodeUrl] = useState('');
-    const [setupSecret, setSetupSecret] = useState('');
-    const [verificationCode, setVerificationCode] = useState('');
-    const [setupStep, setSetupStep] = useState(1); // 1: Generate, 2: Verify
-    const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleGenerateSecret = async () => {
-        setLoading(true);
-        setMessage('');
-        try {
-            const res = await api.post('/users/2fa/generate-secret');
-            setQrCodeUrl(res.data.qrCodeUrl);
-            setSetupSecret(res.data.secret);
-            setSetupStep(2);
-            setMessage('Scan the QR code below in your authenticator app.');
-        } catch (err) {
-            setMessage('❌ Failed to generate 2FA secret.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleVerifySetup = async () => {
-        if (!verificationCode) return;
-        setLoading(true);
-        setMessage('');
-        try {
-            const res = await api.post('/users/2fa/verify-setup', {
-                token: verificationCode,
-                secret: setupSecret,
-            });
-            updateUserProfile(res.data.user); // Update context with new 2FA status
-            setMessage(res.data.message);
-            setSetupStep(1); // Reset form
-            setQrCodeUrl('');
-            setSetupSecret('');
-            setVerificationCode('');
-        } catch (err) {
-            setMessage(err.response?.data?.error || '❌ Invalid code. Verification failed.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDisable2FA = async () => {
-        if (!window.confirm("Are you sure you want to disable Two-Factor Authentication?")) return;
-        setLoading(true);
-        setMessage('');
-        try {
-            const res = await api.post('/users/2fa/disable');
-            updateUserProfile(res.data.user); // Update context
-            setMessage(res.data.message);
-        } catch (err) {
-            setMessage('❌ Failed to disable 2FA.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <GlassCard className="mt-8">
-            <div className="flex items-center gap-2 mb-6 text-cyan-400">
-                <Shield size={24} />
-                <h3 className="text-xl font-bold">Two-Factor Authentication (2FA)</h3>
-            </div>
-
-            <div className="flex items-center gap-2 mb-6">
-                <span className="text-slate-300">Status:</span>
-                <span className={`font-semibold px-3 py-1 rounded-full text-sm ${user.is_two_factor_enabled
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
-                    {user.is_two_factor_enabled ? 'Enabled' : 'Disabled'}
-                </span>
-            </div>
-
-            {message && (
-                <div className={`p-4 rounded-xl mb-6 flex items-center gap-2 ${message.includes('❌')
-                        ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                        : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                    }`}>
-                    {message.includes('❌') ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-                    <span>{message}</span>
-                </div>
-            )}
-
-            {user.is_two_factor_enabled ? (
-                <Button
-                    variant="danger"
-                    onClick={handleDisable2FA}
-                    isLoading={loading}
-                    icon={LogOut}
-                >
-                    Disable 2FA
-                </Button>
-            ) : (
-                setupStep === 1 ? (
-                    <Button
-                        variant="primary"
-                        onClick={handleGenerateSecret}
-                        isLoading={loading}
-                        icon={QrCode}
-                    >
-                        Enable 2FA
-                    </Button>
-                ) : (
-                    <div className="space-y-6 animate-fade-in-up">
-                        <div className="flex flex-col items-center p-6 bg-white/5 rounded-xl border border-white/10">
-                            <img src={qrCodeUrl} alt="2FA QR Code" className="w-48 h-48 rounded-lg mb-4" />
-                            <p className="text-sm text-slate-400">Secret Key:</p>
-                            <p className="font-mono text-cyan-300 text-lg tracking-wider">{setupSecret}</p>
-                        </div>
-
-                        <div className="max-w-xs mx-auto space-y-4">
-                            <Input
-                                type="text"
-                                value={verificationCode}
-                                onChange={(e) => setVerificationCode(e.target.value)}
-                                placeholder="Enter 6-digit code"
-                                icon={Shield}
-                                className="text-center text-lg tracking-widest"
-                            />
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setSetupStep(1)}
-                                    disabled={loading}
-                                    className="flex-1"
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    onClick={handleVerifySetup}
-                                    isLoading={loading}
-                                    className="flex-1"
-                                >
-                                    Verify
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            )}
-        </GlassCard>
-    );
-};
-
-// --- Main Profile Component ---
-function Profile() {
-    const { user, updateUserProfile } = useAuth();
-    const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        mobileNumber: '', schoolCollege: '', bio: '',
-    });
-    const [message, setMessage] = useState("");
+const Profile = () => {
+    const { user, fetchUnreadCount } = useAuth();
+    const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total_views: 0, total_downloads: 0 });
+    const [recentUploads, setRecentUploads] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (user) {
-            setFormData({
-                name: user.name || '',
-                mobileNumber: user.mobile_number || '',
-                schoolCollege: user.school_college || '', bio: user.bio || '',
-            });
-        }
-    }, [user]);
+        const loadProfileData = async () => {
+            try {
+                setLoading(true);
+                // 1. Fetch Stats
+                const statsPromise = api.get('/users/stats');
+                // 2. Fetch Recent Uploads
+                const uploadsPromise = api.get('/notes/my-notes');
 
-    const handleUpdate = async (e) => {
-        e.preventDefault();
+                const [statsRes, uploadsRes] = await Promise.all([statsPromise, uploadsPromise]);
+
+                setStats(statsRes.data);
+                setRecentUploads(uploadsRes.data.slice(0, 4));
+            } catch (error) {
+                console.error("Failed to load profile data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadProfileData();
+    }, []);
+
+    const handleShareProfile = () => {
+        const link = `${window.location.origin}/profile/${user?.username}`;
+        navigator.clipboard.writeText(link);
+        alert("Profile link copied to clipboard!");
+    };
+
+    const handleAddSkill = async () => {
+        const skill = prompt("Enter a new skill:");
+        if (!skill) return;
+
         try {
-            const res = await api.put("/users/profile", formData);
-            updateUserProfile(res.data.user);
-            setMessage("✅ Profile updated successfully!");
-            setIsEditing(false);
-        } catch (err) {
-            setMessage("❌ Failed to update profile.");
+            const currentSkills = user.skills || [];
+            // Basic validation
+            if (currentSkills.includes(skill)) {
+                alert("Skill already exists!");
+                return;
+            }
+
+            // Backend update
+            await api.put('/users/profile', { skills: [...currentSkills, skill] });
+            // Reload to refresh user context
+            window.location.reload();
+        } catch (error) {
+            console.error("Failed to add skill:", error);
+            alert("Failed to save skill.");
         }
     };
 
-    const handleChange = (e) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const calculateLevel = (approvedNotes) => {
+        if (approvedNotes >= 50) return { name: 'Expert Contributor', color: 'text-purple-400', bg: 'bg-purple-500/10' };
+        if (approvedNotes >= 20) return { name: 'Pro Contributor', color: 'text-indigo-400', bg: 'bg-indigo-500/10' };
+        if (approvedNotes >= 5) return { name: 'Active Learner', color: 'text-teal-400', bg: 'bg-teal-500/10' };
+        return { name: 'Beginner', color: 'text-slate-400', bg: 'bg-slate-800' };
     };
 
-    if (!user) return (
-        <div className="min-h-screen flex items-center justify-center text-cyan-400">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-400"></div>
+    const contributorLevel = calculateLevel(stats.realStats?.totalUploads || 0);
+
+    if (loading) return (
+        <div className="min-h-screen bg-[#0A0A0C] flex items-center justify-center">
+            <div className="animate-pulse text-cyan-500 font-medium">Loading profile...</div>
         </div>
     );
 
     return (
-        <div className="min-h-screen p-4 md:p-8 relative">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-up pb-12 p-6 md:p-0">
 
-                {/* Profile Header Card */}
-                <GlassCard className="relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-cyan-500/20 to-blue-600/20" />
+            {/* 1. Identity Header */}
+            <div className="relative bg-slate-900/50 border border-white/5 rounded-3xl p-8 overflow-hidden z-0 shadow-2xl">
+                {/* Animated Blur Background */}
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-indigo-600/30 via-purple-600/30 to-cyan-600/30 z-0 animate-pulse"></div>
 
-                    <div className="relative pt-16 px-4 pb-4 flex flex-col md:flex-row items-center md:items-end gap-6">
-                        <div className="w-32 h-32 rounded-full bg-slate-900 border-4 border-slate-800 flex items-center justify-center text-5xl font-bold text-cyan-400 shadow-xl">
-                            {user.name.charAt(0).toUpperCase()}
-                        </div>
-
-                        <div className="flex-1 text-center md:text-left mb-2">
-                            <h1 className="text-3xl font-bold text-white">{user.name}</h1>
-                            <p className="text-cyan-400 font-medium">@{user.username}</p>
-                            <p className="text-slate-400 mt-2 max-w-lg mx-auto md:mx-0">
-                                {user.bio || "No bio added yet."}
-                            </p>
-                        </div>
-
-                        <Button
-                            variant={isEditing ? "secondary" : "primary"}
-                            onClick={() => setIsEditing(!isEditing)}
-                            icon={isEditing ? X : Edit2}
-                        >
-                            {isEditing ? 'Cancel Edit' : 'Edit Profile'}
-                        </Button>
-                    </div>
-                </GlassCard>
-
-                {/* Edit Form */}
-                {isEditing && (
-                    <GlassCard className="animate-fade-in-up border-cyan-500/30">
-                        <div className="flex items-center gap-2 mb-6 text-cyan-400">
-                            <Edit2 size={24} />
-                            <h3 className="text-xl font-bold">Edit Information</h3>
-                        </div>
-
-                        {message && (
-                            <div className={`p-4 rounded-xl mb-6 flex items-center gap-2 ${message.includes('❌')
-                                    ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                                    : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                }`}>
-                                {message.includes('❌') ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-                                <span>{message}</span>
-                            </div>
+                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-end gap-6 mt-12">
+                    {/* Avatar */}
+                    <div className="w-32 h-32 rounded-full border-4 border-slate-900 bg-slate-800 flex items-center justify-center text-4xl font-bold text-white shadow-xl relative group">
+                        {user?.avatarUrl ? (
+                            <img src={user.avatarUrl} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                            <span className="bg-clip-text text-transparent bg-gradient-to-br from-indigo-400 to-purple-400">
+                                {user?.name?.charAt(0)}
+                            </span>
                         )}
-
-                        <form onSubmit={handleUpdate} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Input
-                                    label="Full Name"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    icon={User}
-                                />
-                                <Input
-                                    label="Mobile Number"
-                                    type="tel"
-                                    name="mobileNumber"
-                                    value={formData.mobileNumber}
-                                    onChange={handleChange}
-                                    icon={Phone}
-                                />
-                            </div>
-
-                            <Input
-                                label="School / College"
-                                name="schoolCollege"
-                                value={formData.schoolCollege}
-                                onChange={handleChange}
-                                icon={School}
-                            />
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-300 ml-1">Bio</label>
-                                <textarea
-                                    name="bio"
-                                    value={formData.bio}
-                                    onChange={handleChange}
-                                    rows="3"
-                                    placeholder="Tell us about yourself..."
-                                    className="w-full px-4 py-3 rounded-xl bg-slate-900/50 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none"
-                                />
-                            </div>
-
-                            <div className="flex justify-end">
-                                <Button type="submit" variant="primary" icon={Save}>
-                                    Save Changes
-                                </Button>
-                            </div>
-                        </form>
-                    </GlassCard>
-                )}
-
-                {/* Badges Section */}
-                <GlassCard>
-                    <div className="flex items-center gap-2 mb-6 text-cyan-400">
-                        <Award size={24} />
-                        <h3 className="text-xl font-bold">My Badges</h3>
-                    </div>
-
-                    <div className="flex flex-wrap gap-6">
-                        {(user.badges && user.badges.length > 0) ? user.badges.map(badgeKey => {
-                            const badge = allBadges[badgeKey];
-                            if (!badge) return null;
-                            return (
-                                <div key={badgeKey} className="group relative flex flex-col items-center p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-cyan-500/50 transition-all hover:-translate-y-1">
-                                    <span className="text-5xl mb-2 drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300">{badge.symbol}</span>
-                                    <span className="text-sm font-medium text-slate-300">{badge.name}</span>
-
-                                    <div className="absolute bottom-full mb-2 w-48 bg-slate-900 text-xs text-slate-300 p-3 rounded-lg border border-slate-700 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                                        <p className="font-bold text-cyan-400 mb-1">{badge.name}</p>
-                                        <p>{badge.description}</p>
-                                    </div>
-                                </div>
-                            )
-                        }) : (
-                            <div className="w-full text-center py-8 text-slate-500 border-2 border-dashed border-slate-700 rounded-xl">
-                                <p>No badges earned yet. Start uploading notes!</p>
-                            </div>
-                        )}
-                        <Link to="/my-badges" className="flex flex-col items-center justify-center w-24 h-24 rounded-xl border-2 border-dashed border-slate-700 text-slate-500 hover:text-cyan-400 hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-all group" title="View All Badges">
-                            <span className="text-3xl group-hover:scale-110 transition-transform">+</span>
-                            <span className="text-xs mt-1">View All</span>
+                        <Link to="/settings" className="absolute bottom-0 right-0 p-2 bg-indigo-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                            <Edit3 size={16} />
                         </Link>
                     </div>
-                </GlassCard>
 
-                {/* 2FA Section */}
-                <TwoFactorAuthManager user={user} updateUserProfile={updateUserProfile} />
+                    {/* Info */}
+                    <div className="flex-1 w-full">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white mb-1 flex items-center gap-3 flex-wrap">
+                                    {user?.name}
+                                    <span className={`text-xs px-3 py-1 rounded-full border border-white/5 ${contributorLevel.bg} ${contributorLevel.color} flex items-center gap-1`}>
+                                        <Award size={12} />
+                                        {contributorLevel.name}
+                                    </span>
+                                </h1>
+                                <p className="text-slate-400">@{user?.username} • Joined {new Date(user?.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="flex gap-3">
+                                <Link to="/settings" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors border border-white/5">
+                                    Edit Profile
+                                </Link>
+                                <button onClick={handleShareProfile} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-white/5 hover:text-white transition-colors" title="Share Profile">
+                                    <Share2 size={20} />
+                                </button>
+                            </div>
+                        </div>
 
+                        {/* Quick User Details Row */}
+                        <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-400">
+                            {user?.university && <div className="flex items-center gap-1"><GraduationCap size={14} /> {user.university}</div>}
+                            {user?.branch && <div className="flex items-center gap-1"><BookOpen size={14} /> {user.branch}</div>}
+                            {user?.location && <div className="flex items-center gap-1"><MapPin size={14} /> {user.location || 'India'}</div>}
+
+                            {/* Social Links */}
+                            <div className="flex gap-3 ml-auto">
+                                {user?.social_links?.github && <a href={user.social_links.github} target="_blank" rel="noreferrer" className="hover:text-white transition-colors"><Github size={16} /></a>}
+                                {user?.social_links?.linkedin && <a href={user.social_links.linkedin} target="_blank" rel="noreferrer" className="hover:text-white transition-colors"><Linkedin size={16} /></a>}
+                                {user?.social_links?.website && <a href={user.social_links.website} target="_blank" rel="noreferrer" className="hover:text-white transition-colors"><Globe size={16} /></a>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bio */}
+                {user?.bio && (
+                    <p className="mt-6 text-slate-300 max-w-2xl leading-relaxed bg-slate-800/30 p-4 rounded-xl border border-white/5">
+                        {user.bio}
+                    </p>
+                )}
+            </div>
+
+            {/* 2. Stats Grid with Streak */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 bg-slate-900/50 border border-white/5 rounded-3xl hover:bg-slate-800/50 transition-colors group">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-2xl group-hover:scale-110 transition-transform">
+                            <Upload size={24} />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Uploads</p>
+                            <h3 className="text-2xl font-bold text-white">{stats.realStats?.totalUploads || 0}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6 bg-slate-900/50 border border-white/5 rounded-3xl hover:bg-slate-800/50 transition-colors group">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-amber-500/10 text-amber-400 rounded-2xl group-hover:scale-110 transition-transform">
+                            <BookOpen size={24} />
+                        </div>
+                        <div>
+                            <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Reads</p>
+                            <h3 className="text-2xl font-bold text-white">{stats.realStats?.readsCount || 0}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Streak Card */}
+                <div className="p-6 bg-gradient-to-br from-orange-900/20 to-red-900/20 border border-orange-500/20 rounded-3xl hover:border-orange-500/40 transition-colors group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Flame size={64} />
+                    </div>
+                    <div className="flex items-center gap-4 mb-2 relative z-10">
+                        <div className="p-3 bg-orange-500/10 text-orange-400 rounded-2xl group-hover:scale-110 transition-transform">
+                            <Flame size={24} />
+                        </div>
+                        <div>
+                            <p className="text-orange-300/70 text-xs uppercase tracking-wider font-semibold">Streak</p>
+                            <h3 className="text-2xl font-bold text-white">{stats.realStats?.streak || 0} Days</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* 3. Skills & Badges (2 Columns) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left: Badges & Skills */}
+                <div className="lg:col-span-1 space-y-6">
+                    {/* Skills / Interests */}
+                    <div className="p-6 bg-slate-900/50 border border-white/5 rounded-3xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2"><Zap size={18} className="text-yellow-400" /> Top Skills</h3>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {user?.skills && user.skills.length > 0 ? (
+                                user.skills.map((skill, i) => (
+                                    <span key={i} className="px-3 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg border border-slate-700">
+                                        {skill}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-slate-500 text-xs italic">No skills added yet.</span>
+                            )}
+                            <button
+                                onClick={handleAddSkill}
+                                className="px-3 py-1 bg-slate-800/50 text-slate-500 text-xs rounded-lg border border-dashed border-slate-700 hover:text-white hover:border-slate-500 transition-colors"
+                            >
+                                + Add
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-6 bg-slate-900/50 border border-white/5 rounded-3xl">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold text-white">Earned Badges</h3>
+                            <Link to="/my-badges" className="text-xs text-indigo-400 hover:text-indigo-300">View All</Link>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="aspect-square bg-slate-800 rounded-2xl flex flex-col items-center justify-center border border-white/5 hover:border-indigo-500/30 transition-colors cursor-help group/badge">
+                                <Trophy size={24} className="text-yellow-500 mb-2 group-hover/badge:scale-110 transition-transform" />
+                                <span className="text-[10px] text-slate-400">Early Bird</span>
+                            </div>
+                            <div className="aspect-square bg-slate-800 rounded-2xl flex flex-col items-center justify-center border border-white/5 hover:border-indigo-500/30 transition-colors opacity-50 grayscale">
+                                <Trophy size={24} className="text-slate-500 mb-2" />
+                                <span className="text-[10px] text-slate-500">Udder</span>
+                            </div>
+                            <div className="aspect-square bg-slate-800 rounded-2xl flex flex-col items-center justify-center border border-white/5 hover:border-indigo-500/30 transition-colors opacity-50 grayscale">
+                                <Trophy size={24} className="text-slate-500 mb-2" />
+                                <span className="text-[10px] text-slate-500">Writer</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Recent Activity */}
+                <div className="lg:col-span-2">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-bold text-white">Recent Uploads</h2>
+                        <Link to="/my-uploads" className="text-sm text-indigo-400 hover:text-indigo-300">View All</Link>
+                    </div>
+
+                    <div className="space-y-4">
+                        {recentUploads.length > 0 ? recentUploads.map(note => (
+                            <div key={note.id} className="group p-4 bg-slate-900/50 border border-white/5 hover:border-indigo-500/30 rounded-2xl flex items-center gap-4 transition-all">
+                                <div className="p-3 bg-slate-800 rounded-xl group-hover:bg-indigo-500/20 transition-colors">
+                                    <BookOpen size={20} className="text-slate-400 group-hover:text-indigo-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-white font-semibold truncate">{note.title}</h4>
+                                    <p className="text-xs text-slate-400">{note.subject} • {new Date(note.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div className="flex items-center gap-4 text-slate-500 text-sm">
+                                    <span className="flex items-center gap-1"><BookOpen size={14} /> {note.view_count || 0}</span>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="text-center py-12 bg-slate-900/30 rounded-3xl border border-white/5 border-dashed">
+                                <p className="text-slate-400 mb-4">You haven't uploaded any notes yet.</p>
+                                <Link to="/my-uploads">
+                                    <button className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors">
+                                        Upload your first note
+                                    </button>
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
-}
+};
 
 export default Profile;

@@ -6,21 +6,36 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        inter: ['Inter', 'sans-serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+      },
+      colors: {
+        primary: {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          400: '#4ade80',
+          500: '#22c55e', // Green
+          600: '#16a34a',
+        },
+        dark: {
+          900: '#0f172a',
+          950: '#020617', // Main BG
+        }
+      },
       animation: {
-        'fadeInUp': 'fadeInUp 1s ease-in-out',
-        'fadeIn': 'fadeIn 1.5s ease-in-out',
-        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'bounce-slow': 'bounce 4s infinite'
+        'fadeInUp': 'fadeInUp 0.8s ease-out forwards',
+        'float': 'float 6s ease-in-out infinite',
       },
       keyframes: {
         fadeInUp: {
           '0%': { opacity: '0', transform: 'translateY(20px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        }
       }
     },
   },

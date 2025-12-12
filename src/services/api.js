@@ -3,7 +3,8 @@
 import axios from "axios";
 
 // --------- Configuration ----------
-const LIVE_BACKEND_URL = "https://learnify-backend-g6cx.onrender.com"; // replace if needed
+const LIVE_BACKEND_URL = "http://localhost:5000"; // Default to local for development
+
 const API_BASE = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
 const BASE_URL = `${API_BASE.replace(/\/$/, "")}/api`;
 
@@ -192,6 +193,20 @@ export async function login(credentials = {}) {
 }
 
 // ... (2FA and Badge helpers remain unchanged) ...
+
+
+/**
+ * GET dynamic filter options (subjects, courses, universities, states)
+ */
+export async function getFilterOptions() {
+  try {
+    const res = await api.get('/notes/available-subjects');
+    return res.data;
+  } catch (err) {
+    console.error("Failed to fetch filter options", err);
+    return { subjects: [], courses: [], fields: [], universities: [], states: [], hierarchy: {} };
+  }
+}
 
 // --------- Export default axios instance ----------
 export default api;

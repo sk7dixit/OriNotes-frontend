@@ -1,12 +1,11 @@
-// src/pages/NoteViewer.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SecurePdfViewer from '../components/SecurePdfViewer';
-import ReportNote from '../components/ReportNote'; // <-- NEW: Import the reporting component
+import ReportNote from '../components/ReportNote';
 import { Rating } from 'react-simple-star-rating';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Flag } from 'lucide-react'; // <-- NEW: Import Flag icon
+import { Flag, Lock, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
@@ -24,11 +23,15 @@ const RatingSection = ({ noteId }) => {
             setLoading(true);
             try {
                 const res = await api.get(`/notes/${noteId}/ratings`);
-                setRatings(res.data);
-                const myReview = res.data.find(r => r.username === user.username);
-                if (myReview) {
-                    setUserRating(myReview.rating);
-                    setReviewText(myReview.review_text);
+                if (Array.isArray(res.data)) {
+                    setRatings(res.data);
+                    const myReview = res.data.find(r => r.username === user.username);
+                    if (myReview) {
+                        setUserRating(myReview.rating);
+                        setReviewText(myReview.review_text);
+                    }
+                } else {
+                    setRatings([]);
                 }
             } catch (err) {
                 console.error("Failed to fetch ratings", err);
@@ -63,7 +66,21 @@ const RatingSection = ({ noteId }) => {
             <h2 className="text-3xl font-bold mb-4 text-white">Ratings & Reviews <span className="text-yellow-400">({averageRating} ★)</span></h2>
             <div className="mb-8 p-4 border border-gray-700 rounded-lg">
                 <h3 className="text-xl font-semibold mb-2">Your Review</h3>
-                <Rating onClick={handleRating} initialValue={userRating} />
+                <div className="flex items-center gap-2">
+                    <Rating
+                        onClick={handleRating}
+                        initialValue={userRating}
+                        size={30}
+                        transition
+                        allowFraction={false}
+                        fillColor='#facc15'
+                        emptyColor='#4b5563'
+                        SVGstyle={{ display: 'inline' }}
+                    />
+                    <span className="text-sm text-gray-400 ml-2">
+                        {userRating ? `${userRating} Stars` : 'Select a rating'}
+                    </span>
+                </div>
                 <textarea
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
@@ -93,66 +110,129 @@ const RatingSection = ({ noteId }) => {
 
 
 function NoteViewer() {
-  const { noteId } = useParams();
-  const navigate = useNavigate();
+    const { noteId } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth(); // Needed to check login status
 
-  // --- NEW: State for reporting ---
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [noteTitle, setNoteTitle] = useState("Loading Note..."); // State to hold the note's title
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [note, setNote] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [requesting, setRequesting] = useState(false);
 
-  // --- NEW: Fetch Note Title on Load (needed for the report modal) ---
-  useEffect(() => {
-    const fetchTitle = async () => {
+    useEffect(() => {
+        const fetchNote = async () => {
+            try {
+                const res = await api.get(`/notes/${noteId}`);
+                setNote(res.data);
+            } catch (err) {
+                console.error("Failed to fetch note", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchNote();
+    }, [noteId]);
+
+    const handleRequestAccess = async () => {
+        if (!user) {
+            alert("Please login to request access.");
+            return;
+        }
+        setRequesting(true);
         try {
-            // We use the same getSingleNote route we have already implemented
-            const res = await api.get(`/notes/${noteId}`);
-            setNoteTitle(res.data.title);
+            await api.post(`/notes/access/request/${noteId}`);
+            // Update local state to reflect pending
+            setNote(prev => ({ ...prev, access_status: 'pending' }));
         } catch (err) {
-            console.error("Failed to fetch note title", err);
-            setNoteTitle("Note Details");
+            console.error(err);
+            alert("Failed to send request.");
+        } finally {
+            setRequesting(false);
         }
     };
-    fetchTitle();
-  }, [noteId]);
 
+    if (loading) return <div className="p-10 text-center">Loading note...</div>;
+    if (!note) return <div className="p-10 text-center">Note not found.</div>;
 
-  return (
-    <div className="w-full">
-        {/* Top Control Bar */}
-        <div className="mb-6 flex justify-between items-center">
-            <button onClick={() => navigate(-1)} className="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-              &larr; Back
-            </button>
+    const hasAccess = note.has_access;
 
-            {/* Report Button (Phase 2 Community Curation) */}
-            <button
-                onClick={() => setIsReportModalOpen(true)}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-            >
-                <Flag className="w-5 h-5" /> Report Note
-            </button>
+    return (
+        <div className="w-full">
+            {/* Top Control Bar */}
+            <div className="mb-6 flex justify-between items-center">
+                <button onClick={() => navigate(-1)} className="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                    &larr; Back
+                </button>
+
+                {/* Report Button */}
+                <button
+                    onClick={() => setIsReportModalOpen(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+                >
+                    <Flag className="w-5 h-5" /> Report Note
+                </button>
+            </div>
+
+            {/* Note Info Header (Visible to all) */}
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold text-white mb-2">{note.title}</h1>
+                <p className="text-slate-400">By {note.username || 'Unknown'} • {formatDate(note.created_at)}</p>
+            </div>
+
+            {/* --- ACCESS CONTROL --- */}
+            {hasAccess ? (
+                <>
+                    {/* PDF VIEWER CONTAINER */}
+                    <div className="w-full h-[85vh] bg-gray-800 rounded-lg overflow-hidden shadow-2xl mb-8">
+                        <SecurePdfViewer noteId={noteId} />
+                    </div>
+                    {/* Ratings */}
+                    <div className="w-full">
+                        <RatingSection noteId={noteId} />
+                    </div>
+                </>
+            ) : (
+                <div className="w-full h-[50vh] bg-slate-900/50 border border-slate-700 rounded-2xl flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+                    <div className="bg-slate-800 p-4 rounded-full mb-4">
+                        <Lock size={48} className="text-purple-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Restricted Access</h2>
+                    <p className="text-slate-400 max-w-md mb-8">
+                        This is a personal note. You need permission from the owner to view it.
+                    </p>
+
+                    {note.access_status === 'pending' ? (
+                        <div className="flex items-center gap-2 px-6 py-3 bg-yellow-500/10 text-yellow-400 rounded-xl border border-yellow-500/20 font-medium">
+                            <Clock size={20} />
+                            Access Request Pending
+                        </div>
+                    ) : note.access_status === 'rejected' ? (
+                        <div className="flex items-center gap-2 px-6 py-3 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20 font-medium">
+                            <XCircle size={20} />
+                            Access Request Denied
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleRequestAccess}
+                            disabled={requesting}
+                            className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-purple-500/25 transition-all flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {requesting ? "Sending..." : "Request Access"}
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* --- Report Modal --- */}
+            {isReportModalOpen && (
+                <ReportNote
+                    noteId={noteId}
+                    noteTitle={note.title}
+                    onClose={() => setIsReportModalOpen(false)}
+                />
+            )}
         </div>
-
-      {/* --- PDF VIEWER CONTAINER --- */}
-      <div className="w-full h-[85vh] bg-gray-800 rounded-lg overflow-hidden shadow-2xl mb-8">
-        <SecurePdfViewer noteId={noteId} />
-      </div>
-
-      {/* The ratings section will now be visible by scrolling down the main page */}
-      <div className="w-full">
-         <RatingSection noteId={noteId} />
-      </div>
-
-      {/* --- NEW: Report Modal --- */}
-      {isReportModalOpen && (
-        <ReportNote
-            noteId={noteId}
-            noteTitle={noteTitle}
-            onClose={() => setIsReportModalOpen(false)}
-        />
-      )}
-    </div>
-  );
+    );
 }
 
 export default NoteViewer;
