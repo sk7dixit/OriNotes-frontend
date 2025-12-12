@@ -3,7 +3,7 @@
 import axios from "axios";
 
 // --------- Configuration ----------
-const LIVE_BACKEND_URL = "http://localhost:5000"; // Default to local for development
+const LIVE_BACKEND_URL = process.env.REACT_APP_API_URL; // Default to local for development
 
 const API_BASE = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
 const BASE_URL = `${API_BASE.replace(/\/$/, "")}/api`;
