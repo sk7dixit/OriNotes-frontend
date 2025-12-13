@@ -3,10 +3,14 @@
 import axios from "axios";
 
 // --------- Configuration ----------
-const LIVE_BACKEND_URL = process.env.REACT_APP_API_URL; // Default to local for development
+// --------- Configuration ----------
+// In Vite, use import.meta.env.VITE_* for environment variables.
+// Fallback to localhost for development if not set, but in production this should be set in Netlify.
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-const API_BASE = import.meta.env.VITE_API_URL || LIVE_BACKEND_URL;
-const BASE_URL = `${API_BASE.replace(/\/$/, "")}/api`;
+// Ensure API_BASE is a string before calling replace to avoid "Cannot read properties of undefined"
+const cleanBase = (API_BASE || "").replace(/\/$/, "");
+const BASE_URL = `${cleanBase}/api`;
 
 // --------- Axios instance ----------
 const api = axios.create({
