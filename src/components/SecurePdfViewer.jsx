@@ -30,8 +30,9 @@ const PaywallOverlay = () => {
 };
 
 
-const SecurePdfViewer = ({ noteId }) => {
+const SecurePdfViewer = ({ note }) => {
   const { user } = useAuth();
+  const noteId = note?.id;
   const [pdfFile, setPdfFile] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +45,10 @@ const SecurePdfViewer = ({ noteId }) => {
   // --- NEW: Determine User Access Status ---
   const isSubscribed = user?.subscription_expiry && new Date(user.subscription_expiry) > new Date();
   const isAdmin = user?.role === 'admin';
-  const hasUnlimitedAccess = isAdmin || isSubscribed;
+  // FIX: University materials are always free/unlimited
+  const isUniversityMaterial = note?.material_type === 'university_material';
+
+  const hasUnlimitedAccess = isAdmin || isSubscribed || isUniversityMaterial;
 
   // The maximum page a non-subscribed user can view
   const maxViewablePage = useMemo(() => {
@@ -58,7 +62,7 @@ const SecurePdfViewer = ({ noteId }) => {
     setNumPages(numPages);
     // If user is not subscribed and tried to jump past the limit, reset to the limit
     if (!hasUnlimitedAccess && pageNumber > FREE_PAGE_LIMIT) {
-        setPageNumber(FREE_PAGE_LIMIT);
+      setPageNumber(FREE_PAGE_LIMIT);
     }
   }
 
@@ -89,9 +93,9 @@ const SecurePdfViewer = ({ noteId }) => {
           const errorText = await response.data.text();
           let parsedError;
           try {
-              parsedError = JSON.parse(errorText);
-          } catch(e) {
-              parsedError = { error: "Server did not return a valid PDF. Check subscription status or access rights." };
+            parsedError = JSON.parse(errorText);
+          } catch (e) {
+            parsedError = { error: "Server did not return a valid PDF. Check subscription status or access rights." };
           }
           throw new Error(parsedError.error || "Access Denied: Could not fetch the note.");
         }
@@ -108,8 +112,8 @@ const SecurePdfViewer = ({ noteId }) => {
     fetchPdf();
 
     return () => {
-        window.removeEventListener('focus', handleFocus);
-        window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
     };
   }, [noteId]);
 
@@ -119,15 +123,15 @@ const SecurePdfViewer = ({ noteId }) => {
 
   if (error || !pdfFile) {
     return (
-        <div className="p-8 text-center bg-gray-700 rounded-lg">
-            <h3 className="text-2xl font-bold text-red-500 mb-4">Error Loading Note</h3>
-            <p className="text-gray-300 mb-6">{error || "PDF file could not be loaded."}</p>
-            {error.includes("Access Denied") && (
-                <Link to="/subscribe" className="bg-cyan-500 text-white font-bold py-2 px-4 rounded hover:bg-cyan-600 transition-colors">
-                    Upgrade to OriPro
-                </Link>
-            )}
-        </div>
+      <div className="p-8 text-center bg-gray-700 rounded-lg">
+        <h3 className="text-2xl font-bold text-red-500 mb-4">Error Loading Note</h3>
+        <p className="text-gray-300 mb-6">{error || "PDF file could not be loaded."}</p>
+        {error.includes("Access Denied") && (
+          <Link to="/subscribe" className="bg-cyan-500 text-white font-bold py-2 px-4 rounded hover:bg-cyan-600 transition-colors">
+            Upgrade to OriPro
+          </Link>
+        )}
+      </div>
     );
   }
 
@@ -148,15 +152,15 @@ const SecurePdfViewer = ({ noteId }) => {
         <button onClick={goToNextPage} disabled={!numPages || pageNumber >= maxViewablePage} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Next</button>
 
         <div className="ml-auto flex items-center gap-2">
-            <button onClick={zoomOut} className="px-3 py-1 bg-gray-600 rounded">-</button>
-            <span>{Math.round(scale * 100)}%</span>
-            <button onClick={zoomIn} className="px-3 py-1 bg-gray-600 rounded">+</button>
+          <button onClick={zoomOut} className="px-3 py-1 bg-gray-600 rounded">-</button>
+          <span>{Math.round(scale * 100)}%</span>
+          <button onClick={zoomIn} className="px-3 py-1 bg-gray-600 rounded">+</button>
         </div>
 
         {isAdmin && (
-           <a href={URL.createObjectURL(pdfFile)} download={`note-${noteId}.pdf`} className="ml-4 px-3 py-1 bg-green-600 rounded">
-             Download (Admin)
-           </a>
+          <a href={URL.createObjectURL(pdfFile)} download={`note-${noteId}.pdf`} className="ml-4 px-3 py-1 bg-green-600 rounded">
+            Download (Admin)
+          </a>
         )}
       </div>
 

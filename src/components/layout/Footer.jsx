@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Instagram, Facebook, Linkedin, AtSign } from 'lucide-react';
 import Logo from '../ui/Logo';
 
 const Footer = () => {
@@ -46,7 +47,20 @@ const Footer = () => {
                         &copy; {new Date().getFullYear()} OriNotes. All rights reserved.
                     </p>
                     <div className="flex gap-4">
-                        {/* Social icons could go here */}
+                        <div className="flex gap-4">
+                            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-pink-500 transition-colors">
+                                <Instagram size={20} />
+                            </a>
+                            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-500 transition-colors">
+                                <Facebook size={20} />
+                            </a>
+                            <a href="https://threads.net" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">
+                                <AtSign size={20} />
+                            </a>
+                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-400 transition-colors">
+                                <Linkedin size={20} />
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

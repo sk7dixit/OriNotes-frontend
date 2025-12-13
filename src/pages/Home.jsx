@@ -242,9 +242,7 @@ const Home = () => {
         </div>
       </section>
 
-      <footer className="border-t border-slate-800 py-12 bg-slate-950 text-center text-slate-500 text-sm">
-        <p>&copy; {new Date().getFullYear()} OriNotes. All rights reserved.</p>
-      </footer>
+      <Footer />
 
     </div>
   );

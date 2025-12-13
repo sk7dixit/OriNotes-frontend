@@ -184,7 +184,7 @@ function NoteViewer() {
                 <>
                     {/* PDF VIEWER CONTAINER */}
                     <div className="w-full h-[85vh] bg-gray-800 rounded-lg overflow-hidden shadow-2xl mb-8">
-                        <SecurePdfViewer noteId={noteId} />
+                        <SecurePdfViewer note={note} />
                     </div>
                     {/* Ratings */}
                     <div className="w-full">
