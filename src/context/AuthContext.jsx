@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
         // 2. If no session, attempt to refresh token via cookie
         console.log("Attempting token refresh via cookie...");
         // Add timeout to prevent infinite loading
-        const refreshPromise = api.post('/users/refresh-token');
+        const refreshPromise = api.post('/users/refresh');
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 5000));
 
         const refreshResponse = await Promise.race([refreshPromise, timeoutPromise]);
