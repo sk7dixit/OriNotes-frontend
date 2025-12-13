@@ -9,7 +9,7 @@ import { Github } from 'lucide-react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, githubProvider } from '../config/firebase';
 
-import Logo from '../components/ui/Logo';
+
 
 const COUNTRY_CODES = [
   { code: '+91', country: 'IN' },
