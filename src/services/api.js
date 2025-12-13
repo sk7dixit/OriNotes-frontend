@@ -78,8 +78,8 @@ function onRefreshed(newToken) {
  */
 async function requestRefreshToken() {
   try {
-    // Try /auth/refresh first, fallback to /users/refresh
-    const endpoints = ["/auth/refresh", "/users/refresh", "/auth/token/refresh"];
+    // Only use the correct endpoint: /users/refresh
+    const endpoints = ["/users/refresh"];
     for (const ep of endpoints) {
       try {
         // Use global axios instance to bypass API interceptor with expired token
