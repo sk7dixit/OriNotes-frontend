@@ -208,6 +208,13 @@ function MyStats() {
                     color="yellow"
                     onClick={() => navigate('/my-notes?status=pending')}
                 />
+                <MetricCard
+                    title="Rejected Notes"
+                    value={stats.overview?.rejected || 0}
+                    icon={XCircle}
+                    color="red"
+                    onClick={() => navigate('/my-notes?status=rejected')}
+                />
             </div>
 
             {/* Highlights Section (New) */}

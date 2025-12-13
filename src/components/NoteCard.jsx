@@ -93,11 +93,10 @@ const NoteCard = ({ note, isFavourite, onToggleFavourite, user }) => {
                             <Eye size={14} className="text-sky-400" />
                             <span>{note.view_count || 0}</span>
                         </div>
-                        {/* Download count placeholder if data exists later */}
-                        {/* <div className="flex items-center gap-1.5" title="Downloads">
-                            <Download size={14} className="text-emerald-400" />
-                            <span>0</span>
-                        </div> */}
+                        <div className="flex items-center gap-1.5" title="Views">
+                            <Eye size={14} className="text-sky-400" />
+                            <span>{note.view_count || 0}</span>
+                        </div>
                     </div>
 
                     <Link

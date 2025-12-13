@@ -9,6 +9,7 @@ import AdminUsers from "../components/admin/AdminUsers";
 import AdminApprovals from "../components/admin/AdminApprovals";
 import AdminUpload from "../components/admin/AdminUpload";
 import AdminFeedback from "../components/admin/AdminFeedback"; // New Feedback Component
+import AdminDeleteRequests from "../components/admin/AdminDeleteRequests"; // New Delete Request Component
 import AdminSettings from "./AdminSettings";
 
 // Placeholder Components for Tabs not yet fully implemented
@@ -68,6 +69,8 @@ export default function AdminDashboard() {
         return <AdminUpload />;
       case 'feedback':
         return <AdminFeedback />; // New Feedback Tab
+      case 'delete-requests':
+        return <AdminDeleteRequests />;
       case 'settings':
         return <AdminSettings />;
       default:

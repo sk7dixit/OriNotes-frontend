@@ -59,7 +59,6 @@ export default function AdminSettings() {
           platform_name: 'Smart Notes',
           platform_description: 'The best place to share and find university notes.',
           support_email: 'support@smartnotes.com',
-          maintenance_mode: false,
           auto_approval: false,
           allow_handwritten: true,
           max_upload_size: '50', // MB
@@ -79,7 +78,7 @@ export default function AdminSettings() {
         const merged = { ...defaults, ...res.data };
 
         // Normalization: specific keys that should be booleans
-        const boolKeys = ['maintenance_mode', 'auto_approval', 'allow_handwritten', 'is_subscription_enabled', 'enable_ads', 'allow_account_deletion', 'force_2fa_admin', 'enable_api_access'];
+        const boolKeys = ['auto_approval', 'allow_handwritten', 'is_subscription_enabled', 'enable_ads', 'allow_account_deletion', 'force_2fa_admin', 'enable_api_access'];
         boolKeys.forEach(k => {
           if (merged[k] === 'true') merged[k] = true;
           if (merged[k] === 'false') merged[k] = false;
@@ -160,12 +159,6 @@ export default function AdminSettings() {
               description="Where users should send support queries."
               value={settings.support_email}
               onChange={(val) => updateSetting('support_email', val)}
-            />
-            <SettingToggle
-              label="Maintenance Mode"
-              description="Disable the platform for all non-admin users."
-              checked={settings.maintenance_mode}
-              onChange={(val) => updateSetting('maintenance_mode', val)}
             />
           </div>
         );

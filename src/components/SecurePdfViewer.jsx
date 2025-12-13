@@ -42,37 +42,17 @@ const SecurePdfViewer = ({ note }) => {
   const [scale, setScale] = useState(1.0);
   const [isWindowFocused, setIsWindowFocused] = useState(true);
 
-  // --- NEW: Determine User Access Status ---
-  const isSubscribed = user?.subscription_expiry && new Date(user.subscription_expiry) > new Date();
   const isAdmin = user?.role === 'admin';
-  // FIX: University materials are always free/unlimited
-  const isUniversityMaterial = note?.material_type === 'university_material';
-
-  const hasUnlimitedAccess = isAdmin || isSubscribed || isUniversityMaterial;
-
-  // The maximum page a non-subscribed user can view
-  const maxViewablePage = useMemo(() => {
-    return hasUnlimitedAccess ? (numPages || Infinity) : FREE_PAGE_LIMIT;
-  }, [hasUnlimitedAccess, numPages]);
-
-  // Check if the current page is blocked by the paywall
-  const isPageBlocked = pageNumber > maxViewablePage;
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
-    // If user is not subscribed and tried to jump past the limit, reset to the limit
-    if (!hasUnlimitedAccess && pageNumber > FREE_PAGE_LIMIT) {
-      setPageNumber(FREE_PAGE_LIMIT);
-    }
   }
 
   const zoomIn = () => setScale(prevScale => prevScale < 2.0 ? prevScale + 0.2 : prevScale);
   const zoomOut = () => setScale(prevScale => prevScale > 0.4 ? prevScale - 0.2 : prevScale);
 
-  // --- FIX: Update navigation to respect maxViewablePage ---
   const goToPrevPage = () => setPageNumber(prev => (prev > 1 ? prev - 1 : prev));
-  const goToNextPage = () => setPageNumber(prev => (prev < maxViewablePage ? prev + 1 : prev));
-
+  const goToNextPage = () => setPageNumber(prev => (prev < (numPages || Infinity) ? prev + 1 : prev));
 
   useEffect(() => {
     // Anti-screenshot: Blur content when user switches windows
@@ -127,9 +107,7 @@ const SecurePdfViewer = ({ note }) => {
         <h3 className="text-2xl font-bold text-red-500 mb-4">Error Loading Note</h3>
         <p className="text-gray-300 mb-6">{error || "PDF file could not be loaded."}</p>
         {error.includes("Access Denied") && (
-          <Link to="/subscribe" className="bg-cyan-500 text-white font-bold py-2 px-4 rounded hover:bg-cyan-600 transition-colors">
-            Upgrade to OriPro
-          </Link>
+          <div className="text-gray-400">Please request access from the owner.</div>
         )}
       </div>
     );
@@ -146,10 +124,9 @@ const SecurePdfViewer = ({ note }) => {
       <div className="w-full bg-gray-800 p-2 flex justify-center items-center gap-4 text-white sticky top-0 z-10">
         <button onClick={goToPrevPage} disabled={pageNumber <= 1} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Prev</button>
 
-        {/* Update: Show max viewable page count if access is limited */}
-        <span>Page {pageNumber} of {hasUnlimitedAccess ? (numPages || '--') : maxViewablePage + ' (Free)'}</span>
+        <span>Page {pageNumber} of {numPages || '--'}</span>
 
-        <button onClick={goToNextPage} disabled={!numPages || pageNumber >= maxViewablePage} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Next</button>
+        <button onClick={goToNextPage} disabled={!numPages || pageNumber >= numPages} className="px-3 py-1 bg-gray-600 rounded disabled:opacity-50">Next</button>
 
         <div className="ml-auto flex items-center gap-2">
           <button onClick={zoomOut} className="px-3 py-1 bg-gray-600 rounded">-</button>
@@ -173,9 +150,6 @@ const SecurePdfViewer = ({ note }) => {
         >
           {/* Render the current page */}
           <Page pageNumber={pageNumber} scale={scale} />
-
-          {/* PHASE 2 FIX: Render Paywall Overlay */}
-          {isPageBlocked && <PaywallOverlay />}
         </Document>
       </div>
     </div>

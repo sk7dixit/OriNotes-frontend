@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import NoteCardDisplay from '../components/NoteCardDisplay'; // <-- NEW: Import standard card
+import NoteCard from '../components/NoteCard'; // Correct standard component
+import { Heart } from 'lucide-react';
 
 function MyFavourites() {
   const [favourites, setFavourites] = useState([]);
@@ -46,32 +47,45 @@ function MyFavourites() {
   }
 
   return (
-    <div className="w-full">
-      <h1 className="text-4xl font-bold text-cyan-400 mb-8">My Favourites</h1>
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">My Favourites</h1>
+          <p className="text-slate-400">Notes you have saved for quick access.</p>
+        </div>
+        <button
+          onClick={fetchFavourites}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition-colors"
+        >
+          Refresh List
+        </button>
+      </div>
 
       {favourites.length > 0 ? (
-        // --- PHASE 3 FIX: Use NoteCardDisplay component ---
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {favourites.map(note => (
-            <NoteCardDisplay
+            <NoteCard
               key={note.id}
-              note={{ ...note, average_rating: 4.8, username: 'Contributor' }} // Mocking missing fields for display
+              note={note}
               isFavourite={true} // Always true on this page
               onToggleFavourite={handleToggleFavourite}
             />
           ))}
         </div>
       ) : (
-        // --- PHASE 3 FIX: Better Empty State ---
-        <div className="text-center py-16 bg-gray-800 rounded-xl border border-gray-700 shadow-xl">
-          <p className="text-6xl mb-4">💖</p>
-          <h2 className="text-2xl font-bold text-gray-300 mb-4">Your Favourites list is empty!</h2>
-          <p className="text-gray-500 mb-6">Start exploring to save notes you love.</p>
+        <div className="flex flex-col items-center justify-center min-h-[400px] bg-slate-900/50 rounded-2xl border border-dashed border-slate-700">
+          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-purple-400">
+            <Heart size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">No favourites yet</h2>
+          <p className="text-slate-400 mb-6 text-center max-w-md">
+            Tap the heart icon on any note to save it here for later access.
+          </p>
           <button
             onClick={() => navigate('/notes')}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition-colors text-lg"
+            className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg transition-all shadow-lg shadow-purple-500/20"
           >
-            Browse Notes Now
+            Browse Notes
           </button>
         </div>
       )}

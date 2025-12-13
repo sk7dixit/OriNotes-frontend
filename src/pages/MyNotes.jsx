@@ -63,8 +63,12 @@ const NoteCardGrid = ({ note, onView, onDelete }) => {
 
                 <div className="mt-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <Button onClick={() => onView(note)} variant="secondary" className="flex-1 text-xs py-2 h-auto">View</Button>
-                    <button onClick={() => onDelete(note.id)} className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors">
-                        <Trash2 size={16} />
+                    <button
+                        onClick={() => onDelete(note.id, note)}
+                        className={`p-2 rounded-lg transition-colors ${note.deletion_requested ? 'text-orange-500 cursor-not-allowed' : 'text-gray-400 hover:bg-red-500/20 hover:text-red-400'}`}
+                        title={note.deletion_requested ? "Deletion Pending" : "Request Deletion"}
+                    >
+                        {note.deletion_requested ? <Clock size={16} /> : <Trash2 size={16} />}
                     </button>
                 </div>
             </div>
@@ -103,8 +107,12 @@ const NoteListItem = ({ note, onView, onDelete }) => (
             <button onClick={() => onView(note)} className="p-2 hover:bg-gray-700 rounded-lg text-gray-300">
                 <Eye size={18} />
             </button>
-            <button onClick={() => onDelete(note.id)} className="p-2 hover:bg-red-500/20 rounded-lg text-gray-400 hover:text-red-400">
-                <Trash2 size={18} />
+            <button
+                onClick={() => onDelete(note.id, note)}
+                className={`p-2 rounded-lg ${note.deletion_requested ? 'text-orange-500 cursor-not-allowed' : 'hover:bg-red-500/20 text-gray-400 hover:text-red-400'}`}
+                title={note.deletion_requested ? "Deletion Pending" : "Request Deletion"}
+            >
+                {note.deletion_requested ? <Clock size={18} /> : <Trash2 size={18} />}
             </button>
         </div>
     </div>
@@ -136,7 +144,7 @@ export default function MyNotes() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPdf, setSelectedPdf] = useState(null);
-    const [filterSemester, setFilterSemester] = useState('all');
+
     const [filterUniversity, setFilterUniversity] = useState('');
 
     useEffect(() => {
@@ -169,18 +177,32 @@ export default function MyNotes() {
         }
     }
 
-    async function handleDelete(id) {
-        if (!window.confirm("Are you sure you want to delete this note?")) return;
+    async function handleDelete(id, note) {
+        if (note.deletion_requested) {
+            alert("A deletion request is already pending for this note.");
+            return;
+        }
+
+        const confirmDelete = window.confirm("Do you want to request deletion for this note?");
+        if (!confirmDelete) return;
+
+        const reason = window.prompt("Please provide a reason for deletion:");
+        if (reason === null) return; // Cancelled
+
         try {
-            await api.delete(`/notes/${id}`);
-            setNotes(prev => prev.filter(n => n.id !== id));
-            // Refetch or adjust stats manually
-            setStats(prev => ({
-                ...prev,
-                total: prev.total - 1,
-            }));
+            const res = await api.delete(`/notes/${id}`, { data: { reason } });
+
+            if (res.data.message.includes("request submitted")) {
+                alert("Deletion request has been submitted to admins.");
+                // Update local state to show pending
+                setNotes(prev => prev.map(n => n.id === id ? { ...n, deletion_requested: true } : n));
+            } else {
+                // If it was immediate delete (e.g. admin or logic changed)
+                setNotes(prev => prev.filter(n => n.id !== id));
+                setStats(prev => ({ ...prev, total: prev.total - 1 }));
+            }
         } catch (err) {
-            alert("Failed to delete note.");
+            alert("Failed to process request.");
         }
     }
 
@@ -190,9 +212,8 @@ export default function MyNotes() {
         const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (note.subject && note.subject.toLowerCase().includes(searchQuery.toLowerCase()));
         const matchesStatus = filterStatus === 'all' || note.approval_status === filterStatus;
-        const matchesSemester = filterSemester === 'all' || (note.semester && note.semester.toString() === filterSemester.toString());
         const matchesUniversity = filterUniversity === '' || (note.university_name && note.university_name.toLowerCase().includes(filterUniversity.toLowerCase()));
-        return matchesSearch && matchesStatus && matchesSemester && matchesUniversity;
+        return matchesSearch && matchesStatus && matchesUniversity;
     });
 
     if (loading) {
@@ -220,13 +241,7 @@ export default function MyNotes() {
                     </Link>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">
-                    <StatCard title="Total Uploads" value={stats.total} icon={FileText} color="#06b6d4" />
-                    <StatCard title="Approved" value={stats.approved} icon={CheckCircle} color="#22c55e" />
-                    <StatCard title="Pending" value={stats.pending} icon={Clock} color="#eab308" />
-                    <StatCard title="Total Views" value={stats.totalViews} icon={BarChart3} color="#8b5cf6" trend="+12%" />
-                </div>
+
 
                 {/* Filters & Toolbar */}
                 <div className="flex flex-col xl:flex-row gap-4 justify-between bg-gray-900/50 p-2 rounded-2xl border border-gray-800">
@@ -254,15 +269,7 @@ export default function MyNotes() {
                             <option value="rejected">Rejected</option>
                         </select>
 
-                        {/* Semester Filter (New) */}
-                        <select
-                            value={filterSemester}
-                            onChange={(e) => setFilterSemester(e.target.value)}
-                            className="w-full md:w-auto bg-gray-800 text-sm text-gray-300 border-none rounded-xl py-2 px-4 focus:ring-1 focus:ring-cyan-500 cursor-pointer"
-                        >
-                            <option value="all">All Semesters</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => <option key={sem} value={sem}>Sem {sem}</option>)}
-                        </select>
+                        {/* Semester Filter Removed: Not supported by backend yet */}
 
                         {/* University Filter (Placeholder for now, could be dynamic) */}
                         <input

@@ -159,6 +159,7 @@ const AdminNavbar = ({ activeTab, setActiveTab }) => {
         { id: 'approvals', label: 'Approvals' },
         { id: 'upload', label: 'Upload' },
         { id: 'feedback', label: 'Feedback' },
+        { id: 'delete-requests', label: 'Delete Requests' },
     ];
 
     // Handle tab navigation

@@ -21,6 +21,9 @@ import ActiveUsers from './pages/ActiveUsers';
 import UploadNotes from './pages/UploadNotes';
 import EditNote from './pages/EditNote';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import HelpCenter from './pages/HelpCenter';
+import Guidelines from './pages/Guidelines';
+import TermsOfService from './pages/TermsOfService';
 import Notifications from './pages/Notifications';
 import RateUs from './pages/RateUs';
 import Share from './pages/Share';
@@ -59,7 +62,7 @@ function MainLayout() {
   // For now, assume Admin Dashboard handles its own layout or we add AdminLayout later.
   // We apply UserLayout to all authenticated user routes.
 
-  const isPublicRoute = ['/', '/login', '/register', '/forgot-password', '/free-note'].includes(location.pathname);
+  const isPublicRoute = ['/', '/login', '/register', '/forgot-password', '/free-note', '/help', '/guidelines', '/terms', '/privacy'].includes(location.pathname);
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/admin-dashboard';
 
   // Show Chat Launcher for non-admin users on non-public routes
@@ -73,6 +76,10 @@ function MainLayout() {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/free-note" element={<FreeNote />} />
+      <Route path="/help" element={<HelpCenter />} />
+      <Route path="/guidelines" element={<Guidelines />} />
+      <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
 
       {/* Private Routes (Wrapped in UserLayout) */}
       <Route path="/dashboard" element={<PrivateRoute><UserLayout><Dashboard /></UserLayout></PrivateRoute>} />
@@ -84,7 +91,7 @@ function MainLayout() {
       <Route path="/note-requests" element={<PrivateRoute><UserLayout><NoteRequests /></UserLayout></PrivateRoute>} />
       <Route path="/notes/view/:noteId" element={<PrivateRoute><UserLayout><NoteViewer /></UserLayout></PrivateRoute>} />
       <Route path="/subscribe" element={<PrivateRoute><UserLayout><Subscribe /></UserLayout></PrivateRoute>} />
-      <Route path="/privacy" element={<PrivateRoute><UserLayout><PrivacyPolicy /></UserLayout></PrivateRoute>} />
+
       <Route path="/notifications" element={<PrivateRoute><UserLayout><Notifications /></UserLayout></PrivateRoute>} />
       <Route path="/rate-us" element={<PrivateRoute><UserLayout><RateUs /></UserLayout></PrivateRoute>} />
       <Route path="/share" element={<PrivateRoute><UserLayout><Share /></UserLayout></PrivateRoute>} />

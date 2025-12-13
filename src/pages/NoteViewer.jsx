@@ -23,13 +23,17 @@ const RatingSection = ({ noteId }) => {
             setLoading(true);
             try {
                 const res = await api.get(`/notes/${noteId}/ratings`);
-                if (Array.isArray(res.data)) {
-                    setRatings(res.data);
-                    const myReview = res.data.find(r => r.username === user.username);
+                // Backend returns { average, ratings: [...] }
+                if (res.data.ratings && Array.isArray(res.data.ratings)) {
+                    setRatings(res.data.ratings);
+                    const myReview = res.data.ratings.find(r => r.username === user.username);
                     if (myReview) {
                         setUserRating(myReview.rating);
                         setReviewText(myReview.review_text);
                     }
+                } else if (Array.isArray(res.data)) {
+                    // Fallback if backend returned just array
+                    setRatings(res.data);
                 } else {
                     setRatings([]);
                 }
@@ -53,7 +57,11 @@ const RatingSection = ({ noteId }) => {
             await api.post(`/notes/${noteId}/rate`, { rating: userRating, review_text: reviewText });
             await refreshUser();
             const res = await api.get(`/notes/${noteId}/ratings`);
-            setRatings(res.data);
+            if (res.data.ratings) {
+                setRatings(res.data.ratings);
+            } else if (Array.isArray(res.data)) {
+                setRatings(res.data);
+            }
         } catch (err) {
             alert("Failed to submit review.");
         }
