@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dataconnect/generated": "file:src/dataconnect-generated",
     "@paypal/react-paypal-js": "^8.9.1",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
@@ -16,7 +17,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.22",
     "axios": "^1.6.8",
-    "firebase": "^12.4.0",
+    "firebase": "^12.6.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.553.0",
     "postcss": "^8.5.6",

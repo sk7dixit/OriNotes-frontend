@@ -1,0 +1,80 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      username: "demouser1",
+      email: "demouser1@example.com",
+      createdAt: "2024-04-26T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      username: "demouser2",
+      email: "demouser2@example.com",
+      createdAt: "2024-04-26T00:00:00Z"
+    }
+  ])
+  notebook_insertMany(data: [
+    {
+      id: "660e8400-e29b-41d4-a716-446655440000",
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      name: "Demo Notebook 1",
+      createdAt: "2024-04-26T00:00:00Z"
+    },
+    {
+      id: "660e8400-e29b-41d4-a716-446655440001",
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      name: "Demo Notebook 2",
+      createdAt: "2024-04-26T00:00:00Z"
+    }
+  ])
+  note_insertMany(data: [
+    {
+      id: "770e8400-e29b-41d4-a716-446655440000",
+      notebookId: "660e8400-e29b-41d4-a716-446655440000",
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Demo Note 1",
+      content: "Example note from demouser1",
+      createdAt: "2024-04-26T00:00:00Z",
+      updatedAt: "2024-04-26T00:00:00Z"
+    },
+    {
+      id: "770e8400-e29b-41d4-a716-446655440001",
+      notebookId: "660e8400-e29b-41d4-a716-446655440001",
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      title: "Demo Note 2",
+      content: "Example note from demouser2",
+      createdAt: "2024-04-26T00:00:00Z",
+      updatedAt: "2024-04-26T00:00:00Z"
+    }
+  ])
+  tag_insertMany(data: [
+    {
+      id: "880e8400-e29b-41d4-a716-446655440000",
+      name: "exampletag1"
+    },
+    {
+      id: "880e8400-e29b-41d4-a716-446655440001",
+      name: "exampletag2"
+    }
+  ])
+  noteTag_insertMany(data: [
+    {
+      noteId: "770e8400-e29b-41d4-a716-446655440000",
+      tagId: "880e8400-e29b-41d4-a716-446655440000",
+      assignedAt: "2024-04-26T00:00:00Z"
+    },
+    {
+      noteId: "770e8400-e29b-41d4-a716-446655440001",
+      tagId: "880e8400-e29b-41d4-a716-446655440001",
+      assignedAt: "2024-04-26T00:00:00Z"
+    }
+  ])
+  sharedNote_insertMany(data: [
+    {
+      noteId: "770e8400-e29b-41d4-a716-446655440000",
+      sharedWithUserId: "550e8400-e29b-41d4-a716-446655440001",
+      accessLevel: "read",
+      sharedAt: "2024-04-26T00:00:00Z"
+    }
+  ])
+}
