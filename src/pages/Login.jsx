@@ -80,7 +80,7 @@ const Login = () => {
     }
 
     try {
-      await api.post('/users/request-login-otp', { identifier: cleanIdentifier });
+      await api.post('/users/login-otp-request', { identifier: cleanIdentifier });
       setOtpSent(true);
       setMessage(`Code sent to ${identifier}`);
     } catch (err) {
@@ -106,7 +106,7 @@ const Login = () => {
     }
 
     try {
-      const res = await api.post('/users/verify-login-otp', { identifier: cleanIdentifier, otp: cleanOtp });
+      const res = await api.post('/users/login-otp-verify', { identifier: cleanIdentifier, otp: cleanOtp });
       const { token, user } = res.data;
       login(token, user);
       handleSuccessRedirect(user);
