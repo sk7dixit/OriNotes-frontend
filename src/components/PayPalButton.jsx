@@ -1,5 +1,6 @@
 import React from "react";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import api from "../services/api";
 
 const PayPalButton = () => {
   return (
@@ -8,23 +9,23 @@ const PayPalButton = () => {
         style={{ layout: "vertical" }}
         createOrder={async () => {
           // Call backend to create PayPal order
-          const res = await fetch("http://localhost:5000/api/payments/create-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount: "10.00" }) // Example $10
-          });
-
-          const order = await res.json();
-          return order.id;
+          try {
+            const res = await api.post("/payments/create-order", { amount: "10.00" });
+            return res.data.id;
+          } catch (err) {
+            console.error("PayPal Create Order Error:", err);
+            throw err;
+          }
         }}
         onApprove={async (data) => {
           // Capture the order
-          const res = await fetch(`http://localhost:5000/api/payments/capture-order/${data.orderID}`, {
-            method: "POST",
-          });
-
-          const details = await res.json();
-          alert("✅ Payment successful! " + JSON.stringify(details));
+          try {
+            const res = await api.post(`/payments/capture-order/${data.orderID}`);
+            alert("✅ Payment successful! " + JSON.stringify(res.data));
+          } catch (err) {
+            console.error("PayPal Capture Error:", err);
+            alert("❌ Payment failed.");
+          }
         }}
       />
     </PayPalScriptProvider>
