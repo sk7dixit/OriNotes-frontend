@@ -57,7 +57,8 @@ const Profile = () => {
             window.location.reload();
         } catch (error) {
             console.error("Failed to add skill:", error);
-            alert("Failed to save skill.");
+            const msg = error.response?.data?.error || error.message || "Failed to save skill.";
+            alert(`Error: ${msg}`);
         }
     };
 

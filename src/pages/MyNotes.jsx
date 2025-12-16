@@ -333,7 +333,7 @@ export default function MyNotes() {
                         </div>
                         <div className="flex-1 bg-black relative">
                             <iframe
-                                src={`/api/notes/${selectedPdf.id}/view`}
+                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/notes/${selectedPdf.id}/view`}
                                 title={selectedPdf.title}
                                 className="w-full h-full border-0"
                             />

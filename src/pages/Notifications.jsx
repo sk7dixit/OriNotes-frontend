@@ -69,7 +69,8 @@ function UserNotificationsView() {
     const getNotificationStyle = (type) => {
         switch (type) {
             case 'upload': return { icon: Upload, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' };
-            case 'rating': return { icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' };
+            case 'rating':
+            case 'rating_admin': return { icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' };
             case 'access_request': return { icon: Key, color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/30' };
             case 'comment': return { icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/30' };
             default: return { icon: Bell, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' };
@@ -121,8 +122,8 @@ function UserNotificationsView() {
                         key={tab.id}
                         onClick={() => setFilter(tab.id)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filter === tab.id
-                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white border border-transparent'
+                            ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                            : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white border border-transparent'
                             }`}
                     >
                         {tab.label}
@@ -184,8 +185,8 @@ function UserNotificationsView() {
     );
 }
 
-// --- VIEW FOR ADMINS ---
-function AdminNotificationsView() {
+// --- VIEW FOR ADMINS (BROADCAST TOOL) ---
+function AdminBroadcastTool() {
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
     const [feedback, setFeedback] = useState('');
@@ -213,9 +214,9 @@ function AdminNotificationsView() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-6 text-gray-100">
-            <h1 className="text-4xl font-bold text-cyan-400 mb-6">Broadcast a Notification</h1>
-            <p className="text-gray-400 mb-8">This message will be sent to every registered user on the platform.</p>
+        <div className="max-w-4xl mx-auto p-6 text-gray-100 mt-12 border-t border-gray-800 pt-12">
+            <h1 className="text-2xl font-bold text-cyan-400 mb-6 flex items-center gap-2"><Key size={24} /> Admin Broadcast</h1>
+            <p className="text-gray-400 mb-8">Send a global notification to all registered users.</p>
 
             <form onSubmit={handleSendNotification} className="bg-gray-800/50 border border-gray-700 p-8 rounded-2xl shadow-xl">
                 <div className="mb-6">
@@ -253,13 +254,21 @@ function AdminNotificationsView() {
     );
 }
 
-// --- MAIN COMPONENT THAT DECIDES WHICH VIEW TO SHOW ---
+// --- MAIN COMPONENT ---
 function Notifications() {
     const { user } = useAuth(); // Assuming useAuth provides 'user' object
 
     if (!user) return null;
 
-    return user.role === 'admin' ? <AdminNotificationsView /> : <UserNotificationsView />;
+    return (
+        <div>
+            {/* Show User Notifications for everyone (including admins) */}
+            <UserNotificationsView />
+
+            {/* Show Broadcast Tool only for admins, below the list */}
+            {user.role === 'admin' && <AdminBroadcastTool />}
+        </div>
+    );
 }
 
 export default Notifications;
