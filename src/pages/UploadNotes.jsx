@@ -308,8 +308,8 @@ export default function UploadNotes() {
           file,
           preview,
           title: file.name.replace('.pdf', '').replace(/[_-]/g, ' '),
-          isFree: false,
-          isPrivate: false
+          isFree: true, // Default to free
+          isPrivate: false // Default to public
         });
       }
 
@@ -553,25 +553,7 @@ export default function UploadNotes() {
                         />
                         <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
                           <span>{Math.round(file.file.size / 1024)} KB</span>
-                          <label className="flex items-center gap-1.5 cursor-pointer hover:text-gray-300 transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={file.isFree}
-                              onChange={(e) => handleFileChange(index, 'isFree', e.target.checked)}
-                              disabled={file.isPrivate}
-                              className="rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-offset-gray-900"
-                            />
-                            Free Access
-                          </label>
-                          <label className="flex items-center gap-1.5 cursor-pointer hover:text-gray-300 transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={file.isPrivate}
-                              onChange={(e) => handleFileChange(index, 'isPrivate', e.target.checked)}
-                              className="rounded border-gray-600 bg-gray-800 text-purple-500 focus:ring-offset-gray-900"
-                            />
-                            Private
-                          </label>
+                          {/* Access controls removed to enforce public access for university notes */}
                         </div>
                       </div>
                       <button onClick={() => removeFile(index)} className="p-2 text-gray-500 hover:text-red-400 transition-colors">

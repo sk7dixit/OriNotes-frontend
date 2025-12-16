@@ -131,14 +131,24 @@ export default function SuggestImprovement() {
 
                                 {/* Actions */}
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm">
-                                        {feedback === 'success' && <span className="text-green-400 flex items-center gap-1 animate-fadeIn"><CheckCircle size={16} /> Sent successfully!</span>}
-                                        {feedback === 'error' && <span className="text-red-400 flex items-center gap-1 animate-fadeIn"><AlertCircle size={16} /> Failed to send.</span>}
+                                    <div className="flex-1 mr-4">
+                                        {feedback === 'success' && (
+                                            <div className="bg-green-500/10 border border-green-500/50 text-green-400 px-4 py-2 rounded-lg flex items-center gap-2 animate-fadeIn w-full">
+                                                <CheckCircle size={20} />
+                                                <span className="font-semibold">Feedback sent successfully!</span>
+                                            </div>
+                                        )}
+                                        {feedback === 'error' && (
+                                            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-2 rounded-lg flex items-center gap-2 animate-fadeIn w-full">
+                                                <AlertCircle size={20} />
+                                                <span className="font-semibold">Failed to send feedback.</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={loading || !message.trim()}
-                                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-purple-600/20 transform transition-all duration-200 hover:-translate-y-1 hover:shadow-purple-600/40 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center gap-2"
+                                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-purple-600/20 transform transition-all duration-200 hover:-translate-y-1 hover:shadow-purple-600/40 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
                                     >
                                         {loading ? <span className="animate-spin">⌛</span> : <Send size={18} />}
                                         Send Feedback

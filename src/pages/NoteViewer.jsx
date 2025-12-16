@@ -17,6 +17,7 @@ const RatingSection = ({ noteId }) => {
     const [userRating, setUserRating] = useState(0);
     const [reviewText, setReviewText] = useState('');
     const [loading, setLoading] = useState(true);
+    const [avgRating, setAvgRating] = useState("N/A");
 
     useEffect(() => {
         const fetchRatings = async () => {
@@ -26,6 +27,7 @@ const RatingSection = ({ noteId }) => {
                 // Backend returns { average, ratings: [...] }
                 if (res.data.ratings && Array.isArray(res.data.ratings)) {
                     setRatings(res.data.ratings);
+                    setAvgRating(res.data.average || "N/A");
                     const myReview = res.data.ratings.find(r => r.username === user.username);
                     if (myReview) {
                         setUserRating(myReview.rating);
@@ -59,6 +61,7 @@ const RatingSection = ({ noteId }) => {
             const res = await api.get(`/notes/${noteId}/ratings`);
             if (res.data.ratings) {
                 setRatings(res.data.ratings);
+                setAvgRating(res.data.average || "N/A");
             } else if (Array.isArray(res.data)) {
                 setRatings(res.data);
             }
@@ -67,11 +70,9 @@ const RatingSection = ({ noteId }) => {
         }
     };
 
-    const averageRating = ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length).toFixed(1) : "N/A";
-
     return (
         <div className="mt-8 p-6 bg-gray-800 rounded-lg">
-            <h2 className="text-3xl font-bold mb-4 text-white">Ratings & Reviews <span className="text-yellow-400">({averageRating} ★)</span></h2>
+            <h2 className="text-3xl font-bold mb-4 text-white">Ratings & Reviews <span className="text-yellow-400">({avgRating} ★)</span></h2>
             <div className="mb-8 p-4 border border-gray-700 rounded-lg">
                 <h3 className="text-xl font-semibold mb-2">Your Review</h3>
                 <div className="flex items-center gap-2">
