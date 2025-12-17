@@ -29,7 +29,7 @@ const Footer = () => {
                         <ul className="space-y-2 text-sm text-slate-400">
                             <li><Link to="/help" className="hover:text-green-400">Help Center</Link></li>
                             <li><Link to="/guidelines" className="hover:text-green-400">Guidelines</Link></li>
-                            <li><a href="mailto:support@orinotes.com" className="hover:text-green-400">Contact Us</a></li>
+                            <li><a href="mailto:helloworld760975@gmail.com" className="hover:text-green-400">Contact Us</a></li>
                         </ul>
                     </div>
 

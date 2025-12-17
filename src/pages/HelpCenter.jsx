@@ -114,7 +114,7 @@ const HelpCenter = () => {
 
                     <div className="mt-12 text-center">
                         <p className="text-slate-400">Still have questions?</p>
-                        <a href="mailto:support@orinotes.com" className="text-green-400 font-medium hover:text-green-300 transition-colors">Contact Support</a>
+                        <a href="mailto:helloworld760975@gmail.com" className="text-green-400 font-medium hover:text-green-300 transition-colors">Contact Support</a>
                     </div>
                 </div>
             </main>

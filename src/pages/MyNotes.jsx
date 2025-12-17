@@ -320,27 +320,84 @@ export default function MyNotes() {
 
             {/* PDF Modal */}
             {selectedPdf && (
-                <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-gray-900 w-full h-full max-w-5xl max-h-[90vh] rounded-2xl overflow-hidden flex flex-col border border-gray-700 shadow-2xl">
-                        <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
-                            <h2 className="text-lg font-bold text-white truncate flex items-center gap-2">
-                                <FileText size={18} className="text-cyan-400" />
-                                {selectedPdf.title}
-                            </h2>
-                            <button onClick={() => setSelectedPdf(null)} className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-white transition-colors">
-                                <XCircle className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <div className="flex-1 bg-black relative">
-                            <iframe
-                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/notes/${selectedPdf.id}/view`}
-                                title={selectedPdf.title}
-                                className="w-full h-full border-0"
-                            />
-                        </div>
-                    </div>
-                </div>
+                <PdfViewerModal selectedPdf={selectedPdf} onClose={() => setSelectedPdf(null)} />
             )}
+        </div>
+    );
+}
+
+// --- Separated PDF Viewer Component to handle fetching ---
+function PdfViewerModal({ selectedPdf, onClose }) {
+    const [pdfUrl, setPdfUrl] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        let objectUrl = null;
+
+        const fetchPdf = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await api.get(`/notes/${selectedPdf.id}/view`, {
+                    responseType: 'blob'
+                });
+
+                // Create a blob URL
+                const blob = new Blob([response.data], { type: 'application/pdf' });
+                objectUrl = URL.createObjectURL(blob);
+                setPdfUrl(objectUrl);
+            } catch (err) {
+                console.error("Failed to load PDF", err);
+                setError("Failed to load document. Please try again.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (selectedPdf?.id) {
+            fetchPdf();
+        }
+
+        return () => {
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [selectedPdf]);
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-gray-900 w-full h-full max-w-5xl max-h-[90vh] rounded-2xl overflow-hidden flex flex-col border border-gray-700 shadow-2xl">
+                <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+                    <h2 className="text-lg font-bold text-white truncate flex items-center gap-2">
+                        <FileText size={18} className="text-cyan-400" />
+                        {selectedPdf.title}
+                    </h2>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-white transition-colors">
+                        <XCircle className="w-6 h-6" />
+                    </button>
+                </div>
+                <div className="flex-1 bg-black relative flex items-center justify-center">
+                    {loading ? (
+                        <div className="text-cyan-500 animate-pulse font-medium flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
+                            Loading Document...
+                        </div>
+                    ) : error ? (
+                        <div className="text-red-400 text-center">
+                            <p>{error}</p>
+                            <Button onClick={onClose} variant="secondary" className="mt-4">Close</Button>
+                        </div>
+                    ) : (
+                        <iframe
+                            src={pdfUrl}
+                            title={selectedPdf.title}
+                            className="w-full h-full border-0"
+                        />
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

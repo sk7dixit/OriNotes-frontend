@@ -58,7 +58,7 @@ export default function AdminSettings() {
         const defaults = {
           platform_name: 'Smart Notes',
           platform_description: 'The best place to share and find university notes.',
-          support_email: 'support@smartnotes.com',
+          support_email: 'helloworld760975@gmail.com',
           auto_approval: false,
           allow_handwritten: true,
           max_upload_size: '50', // MB
