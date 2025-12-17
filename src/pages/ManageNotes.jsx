@@ -6,31 +6,81 @@ import { X } from "lucide-react";
 // ---------------------------------------------------
 // PDF VIEW MODAL
 // ---------------------------------------------------
+// ---------------------------------------------------
+// PDF VIEW MODAL
+// ---------------------------------------------------
 function PdfModal({ noteId, title, onClose }) {
-  if (!noteId) return null;
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!noteId) return;
+
+    let objectUrl = null;
+    const fetchPdf = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await api.get(`/notes/${noteId}/view`, {
+          responseType: 'blob'
+        });
+
+        // Create a blob URL
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        objectUrl = URL.createObjectURL(blob);
+        setPdfUrl(objectUrl);
+      } catch (err) {
+        console.error("Failed to load PDF", err);
+        setError("Failed to load document.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPdf();
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [noteId]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-gray-900 w-full h-full sm:w-[80%] sm:h-[90%] rounded-lg overflow-hidden flex flex-col shadow-xl animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-2 sm:p-4 animate-fadeIn">
+      <div className="bg-gray-900 w-full h-full sm:w-[90%] sm:h-[90%] rounded-xl overflow-hidden flex flex-col shadow-2xl border border-gray-700">
 
         {/* Header */}
-        <div className="flex items-center justify-between p-3 bg-gray-800 border-b border-gray-700">
-          <h2 className="text-lg font-bold text-white truncate">{title}</h2>
+        <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+          <h2 className="text-lg font-bold text-white truncate max-w-[80%]">{title}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-700 rounded transition"
+            className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
           >
-            <X className="w-6 h-6 text-gray-300" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* PDF */}
-        <div className="flex-1 bg-black">
-          <iframe
-            src={`/api/notes/${noteId}/view`}
-            title={title}
-            className="w-full h-full border-0"
-          />
+        <div className="flex-1 bg-black relative flex items-center justify-center">
+          {loading ? (
+            <div className="text-cyan-500 animate-pulse font-medium flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
+              Loading Document...
+            </div>
+          ) : error ? (
+            <div className="text-red-400 text-center">
+              <p>{error}</p>
+              <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">Close</button>
+            </div>
+          ) : (
+            <iframe
+              src={pdfUrl}
+              title={title}
+              className="w-full h-full border-0"
+            />
+          )}
         </div>
       </div>
     </div>
